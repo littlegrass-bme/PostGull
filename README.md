@@ -296,13 +296,19 @@ schtasks /Create /TN "AgentBridge-Watch" /SC MINUTE /MO 30 /F /TR "`"$exe`" watc
 
 ## 从源码构建
 
+需要 Node.js 20 或更高（SEA 特性要求）。依赖装在 `build/` 里，不是仓库根目录：
+
 ```powershell
 cd build
 npm install
 node build.mjs
 ```
 
-产物在 `dist/agent-bridge.exe`。构建用 esbuild 打包成单文件 CJS，再用 Node SEA 注入 node.exe，不需要装打包器之外的东西。
+也可以从仓库根目录跑 `node build/build.mjs`，脚本会自己找对路径。两种方式产物都在 `dist/agent-bridge.exe`。
+
+构建用 esbuild 打包成单文件 CJS，再用 Node SEA 把字节码注入一份 `node.exe` 副本，最后用 postject 写入 blob。整个过程只需要 esbuild 和 postject 两个包，不需要额外的打包器。
+
+实测：从 `git clone` 出来的干净目录，`cd build && npm install && node build.mjs` 能独立产出 88.2 MB 的 exe，不依赖任何被 gitignore 忽略的文件。构建后 `build/` 里会留下 `bundle.cjs`、`sea-prep.blob`、`sea-config.json`，都是中间产物，已被忽略。
 
 ## 已验证到什么程度
 
@@ -321,8 +327,14 @@ node build.mjs
 | 摘要与正文上限 | 301 字摘要被拒，70 KB 正文被拒，codex 26k 字符被拒 |
 | 停用 / blocked 语义 | 两者分别拦截并给出不同报错，`session on` 可恢复启用 |
 | exe 封装 | 88.2 MB 单文件，`version`、`list`、`doctor`、`send` 均正常 |
+| 干净克隆构建 | 从 `git clone` 出来的目录 `cd build && npm install && node build.mjs`，独立产出 88.2 MB exe，测试全过 |
+| 收件归属 | 单测 10 条全过；实测把 `to` 错位的记录塞进队列，被跳过且原样保留，本会话的照常取走 |
+| CDP 超时 | 正常路径连接 3ms / 调用 2ms；用只 accept 不回握手的假服务模拟挂起，2000ms 阈值下 2012ms 触发，报「握手无响应」 |
+| Node 缺失报错 | `BRIDGE_NODE` 指向不存在路径时明确指出该变量有误；缺失时给安装指引而不是裸 ENOENT |
 
 **没有验证到的**：Claude 通道一次都没跑通（本机没装 Claude Code）；macOS / Linux 没跑过；Antigravity 的窗口未打开场景只验证了「转信箱」，没验证「切窗口后 flush 成功」。
+
+另外两处已知的假阴性，不影响正确性但会让人困惑：Antigravity 的确认等待可能超时（对方落盘慢于 45 秒时工具已把它存进信箱，实际已送达）；`[exit code: 1]` 有时是 PowerShell 把 stderr 输出当成错误，不代表命令失败，判断要看命令自身的退出码。
 
 ## 测试与验收
 
