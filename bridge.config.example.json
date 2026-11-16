@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "bridgeName": "my-bridge",
+  "queueDir": "./queue",
+  "maxBodyKB": 64,
+  "testing": {
+    "blockedCategories": ["work"],
+    "note": "带 --test 的消息不允许发往这些类别。work 是干活的会话，拿它做通道自测会把垃圾消息灌进业务对话。"
+  },
+  "aliasesOfSameSession": false,
+  "aliasesOfSameSessionNote": "同一会话 id 挂了多个别名时，是否允许一次 receive 聚合取多个队列。默认 false，因为跨文件取件正是 2026-11-16 误取件事故的模式，务必确认这些别名真的属于同一个对话再打开。",
+  "humanSleeping": false,
+  "humanSleepingSince": null,
+  "humanSleepingNote": "人类在线",
+  "software": [
+    {
+      "id": "dsh",
+      "label": "DeepSeek Harness",
+      "adapter": "dsh",
+      "options": {
+        "credentials": "%USERPROFILE%\\.dsh\\.credentials.yaml",
+        "verifyTimeoutMs": 8000
+      }
+    },
+    {
+      "id": "codex",
+      "label": "Codex CLI",
+      "adapter": "codex",
+      "options": {
+        "command": "codex",
+        "receiveModel": "gpt-6-luna"
+      }
+    },
+    {
+      "id": "gemini",
+      "label": "Antigravity / Gemini",
+      "adapter": "antigravity",
+      "options": {
+        "devtoolsPortFile": "%APPDATA%\\Antigravity\\DevToolsActivePort",
+        "dataRoot": "%USERPROFILE%\\.gemini"
+      }
+    },
+    {
+      "id": "claude",
+      "label": "Claude Code（实验性，未验证）",
+      "adapter": "claude",
+      "enabled": false,
+      "options": {
+        "command": "claude",
+        "sendArgs": ["-p", "--resume", "{id}"]
+      }
+    }
+  ],
+  "sessions": [
+    {
+      "alias": "dsh-bridge",
+      "software": "dsh",
+      "category": "bridge",
+      "id": "填 DSH bridge 会话 id",
+      "enabled": true,
+      "note": "桥接与调度"
+    },
+    {
+      "alias": "dsh-work",
+      "software": "dsh",
+      "category": "work",
+      "id": "填 DSH work 会话 id",
+      "enabled": true,
+      "note": "主任务"
+    },
+    {
+      "alias": "codex-bridge",
+      "software": "codex",
+      "category": "bridge",
+      "id": "填 Codex bridge 线程 id",
+      "enabled": true,
+      "note": "测试与调度专用，不要拿 work 线程做测试"
+    },
+    {
+      "alias": "gemini-work",
+      "software": "gemini",
+      "category": "work",
+      "id": "填 Gemini 对话 id",
+      "enabled": true
+    }
+  ],
+  "quota": {
+    "dsh": { "available": true, "exhaustedUntil": null, "note": "" },
+    "codex": { "available": true, "exhaustedUntil": null, "note": "" },
+    "gemini": { "available": true, "exhaustedUntil": null, "note": "" }
+  },
+  "blocked": []
+}
