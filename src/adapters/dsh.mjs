@@ -113,7 +113,7 @@ export const dsh = {
     const ctx = await discover(sw);
     const known = ctx.items.some((it) => it.sessionId === session.id);
     if (!known) {
-      throw new BridgeError(`DSH 里没有会话 ${session.id}（${session.alias}）`, '会话可能已删除，用 `agent-bridge list` 核对，或重新登记。');
+      throw new BridgeError(`DSH 里没有会话 ${session.id}（${session.alias}）`, '会话可能已删除，用 `ferry list` 核对，或重新登记。');
     }
     await api(ctx, 'session/prompt', {
       request: {

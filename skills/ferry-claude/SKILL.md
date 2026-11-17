@@ -1,9 +1,9 @@
 ---
-name: agent-bridge-claude
-description: 在 Claude Code 里通过 agent-bridge 与其他软件互发消息。注意这是实验性通道，未经完整验证。
+name: ferry-claude
+description: 在 Claude Code 里通过 ferry 与其他软件互发消息。注意这是实验性通道，未经完整验证。
 ---
 
-# agent-bridge（Claude 侧，实验性）
+# ferry（Claude 侧，实验性）
 
 **先读这段**：Claude 通道是实验性的。Claude Code 没有官方的「向指定会话队列写消息」子命令，本工具用 `claude -p --resume <session-id>` 把正文当新输入续接会话。这意味着：
 
@@ -16,8 +16,8 @@ description: 在 Claude Code 里通过 agent-bridge 与其他软件互发消息�
 ## 先看现状
 
 ```powershell
-agent-bridge list
-agent-bridge doctor
+ferry list
+ferry doctor
 ```
 
 `doctor` 里 claude 那行如果是「停用」，先在配置里把 `software[].enabled` 改成 `true`。
@@ -30,7 +30,7 @@ $body = @'
 '@
 $summary = '说清要对方做什么，300 字内'
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($body))
-$b64 | agent-bridge send --to dsh-work --from "Claude" --summary $summary --expect report
+$b64 | ferry send --to dsh-work --from "Claude" --summary $summary --expect report
 ```
 
 ## 收到消息：两次回复

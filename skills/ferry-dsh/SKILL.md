@@ -1,21 +1,21 @@
 ---
-name: agent-bridge-dsh
-description: 在 DeepSeek Harness 里通过 agent-bridge 给 Codex、Gemini(Antigravity)、Claude 或其他已接入软件发消息、查看信箱、收取积压。当用户要求跨软件转发、通知、派活、或检查跨软件消息是否送达时使用。
+name: ferry-dsh
+description: 在 DeepSeek Harness 里通过 ferry 给 Codex、Gemini(Antigravity)、Claude 或其他已接入软件发消息、查看信箱、收取积压。当用户要求跨软件转发、通知、派活、或检查跨软件消息是否送达时使用。
 ---
 
-# agent-bridge（DSH 侧）
+# ferry（DSH 侧）
 
 跨软件消息桥。你负责收发和调度，不负责替对方干活。
 
 ## 先看现状
 
 ```powershell
-agent-bridge list            # 软件、类别、会话、额度
-agent-bridge queue           # 信箱积压与人类休眠状态
-agent-bridge doctor          # 通道连通性自检
+ferry list            # 软件、类别、会话、额度
+ferry queue           # 信箱积压与人类休眠状态
+ferry doctor          # 通道连通性自检
 ```
 
-配置默认在 `bridge.config.json`（当前目录、exe 同目录、或 `%APPDATA%\AgentBridge\`）。找不到就用 `--config <路径>`。
+配置默认在 `ferry.config.json`（当前目录、exe 同目录、或 `%APPDATA%\Ferry\`）。找不到就用 `--config <路径>`。
 
 ## 发消息
 
@@ -27,10 +27,10 @@ $body = @'
 '@
 $summary = '给人类看的摘要，说清要对方做什么，300 字内'
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($body))
-$b64 | agent-bridge send --to dsh-work --from "DSH桥接" --summary $summary --expect report
+$b64 | ferry send --to dsh-work --from "DSH桥接" --summary $summary --expect report
 ```
 
-- `--to` 用别名（`agent-bridge list` 里那列），或 `软件/类别`，同类别多个会话时用 `软件/类别#2`。
+- `--to` 用别名（`ferry list` 里那列），或 `软件/类别`，同类别多个会话时用 `软件/类别#2`。
 - `--expect report`：对方要先回“收到”，完成后回报结果。派活、要求复核、需要结论时用这个。
 - `--expect ack`：只要“收到”，处理完不用再回。纯通知、已完成的告知、规则变更用这个。
 - 长正文用 `--body-file`，短正文用 `--text`。
@@ -57,7 +57,7 @@ $b64 | agent-bridge send --to dsh-work --from "DSH桥接" --summary $summary --e
 
 ## 硬规则
 
-- 发之前查 `agent-bridge list`，确认目标别名、额度、以及 Antigravity 目标是否已打开。不发没查过的目标。
+- 发之前查 `ferry list`，确认目标别名、额度、以及 Antigravity 目标是否已打开。不发没查过的目标。
 - 不要为了通报而发：换会话 id、改了注册表、或者“我已更新某文件”这类单向告知，都不要发。
 - Codex 的 work 会话成本高，只有明确任务或需要它定方向时才发；连通性测试用 bridge 类会话。
 - `humanSleeping` 是只读字段。任何情况下不要改，发现不符只提醒人类。
@@ -70,4 +70,4 @@ $b64 | agent-bridge send --to dsh-work --from "DSH桥接" --summary $summary --e
 | 目标暂不可达，已转入信箱 | 正常。目标激活后 `flush <别名>` |
 | Antigravity 目标未打开 | 在界面切到该对话再 flush；DSH 侧不能后台注入 |
 | 未确认接受 | 消息可能已到但没凭证。不要立刻重发，先 `queue` 看状态，必要时 `flush --force` |
-| 找不到 agent-bridge | 用 exe 绝对路径，或把它加到 PATH |
+| 找不到 ferry | 用 exe 绝对路径，或把它加到 PATH |

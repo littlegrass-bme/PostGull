@@ -1,11 +1,11 @@
-// 配置层。所有软件、类别、会话都由用户在 bridge.config.json 里定义，
+// 配置层。所有软件、类别、会话都由用户在 ferry.config.json 里定义，
 // 代码里不再出现任何写死的软件名、类别名或会话 id。
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { expandPath, ensureDir } from './util.mjs';
 
-export const DEFAULT_CONFIG_NAME = 'bridge.config.json';
+export const DEFAULT_CONFIG_NAME = 'ferry.config.json';
 
 // 内置适配器。software[].adapter 必须是其中之一；未知值直接报错，不静默降级。
 export const ADAPTERS = ['dsh', 'codex', 'antigravity', 'claude', 'webhook'];
@@ -19,14 +19,14 @@ export class BridgeError extends Error {
 
 export function configPath(argvPath) {
   if (argvPath) return expandPath(argvPath);
-  if (process.env.BRIDGE_CONFIG) return expandPath(process.env.BRIDGE_CONFIG);
-  // 默认：当前目录 → 可执行文件所在目录 → %APPDATA%/AgentBridge
+  if (process.env.FERRY_CONFIG) return expandPath(process.env.FERRY_CONFIG);
+  // 默认：当前目录 → 可执行文件所在目录 → %APPDATA%/Ferry
   const cwd = join(process.cwd(), DEFAULT_CONFIG_NAME);
   if (existsSync(cwd)) return cwd;
   const exeDir = dirname(process.execPath);
   const near = join(exeDir, DEFAULT_CONFIG_NAME);
   if (existsSync(near)) return near;
-  const appdata = process.env.APPDATA ? join(process.env.APPDATA, 'AgentBridge', DEFAULT_CONFIG_NAME) : null;
+  const appdata = process.env.APPDATA ? join(process.env.APPDATA, 'Ferry', DEFAULT_CONFIG_NAME) : null;
   if (appdata) return appdata;
   return cwd;
 }
@@ -36,7 +36,7 @@ export function loadConfig(argvPath) {
   if (!existsSync(file)) {
     throw new BridgeError(
       `找不到配置文件：${file}`,
-      '先运行 `agent-bridge init` 生成配置，或加 --config <路径>。',
+      '先运行 `ferry init` 生成配置，或加 --config <路径>。',
     );
   }
   let cfg;
@@ -111,7 +111,7 @@ export function saveConfig(cfg, file) {
 //   --to dsh/work#2            软件/类别#序号，按别名排序，从 1 开始
 // 也允许 --software dsh --category work 的组合写法。
 export function resolveTarget(cfg, spec, category) {
-  if (!spec) throw new BridgeError('缺少目标。用 --to <别名> 或 --to <软件>/<类别>', '先运行 `agent-bridge list` 看有哪些会话。');
+  if (!spec) throw new BridgeError('缺少目标。用 --to <别名> 或 --to <软件>/<类别>', '先运行 `ferry list` 看有哪些会话。');
 
   // 被 blocked 的 id 与别名一律拒绝；停用（enabled:false）的会话同样不可投递。
   // 两者要分别报错：把「已停用」说成「在 blocked 里」会让人找不到原因。
@@ -126,7 +126,7 @@ export function resolveTarget(cfg, spec, category) {
   const assertSendable = (s) => {
     const why = blockedReason(s);
     if (why) {
-      throw new BridgeError(why, '把 blocked 条目删掉，或执行 `agent-bridge session on --alias <别名>` 重新启用。');
+      throw new BridgeError(why, '把 blocked 条目删掉，或执行 `ferry session on --alias <别名>` 重新启用。');
     }
     return s;
   };

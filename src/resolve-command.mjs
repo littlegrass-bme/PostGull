@@ -48,16 +48,16 @@ function withKind(file) {
 //
 // 判据用「可执行文件名不是 node.exe」而非 node:sea 的 isSea()：
 // 前者在打包后一定成立，后者依赖模块可用性。代价是用户把 node.exe 改名会误判，
-// 所以这里同时接受 BRIDGE_NODE 环境变量显式指定，误判也有出路。
+// 所以这里同时接受 FERRY_NODE 环境变量显式指定，误判也有出路。
 export function findNodeExe() {
-  if (process.env.BRIDGE_NODE) {
-    if (!existsSync(process.env.BRIDGE_NODE)) {
+  if (process.env.FERRY_NODE) {
+    if (!existsSync(process.env.FERRY_NODE)) {
       throw new BridgeError(
-        `BRIDGE_NODE 指向的路径不存在：${process.env.BRIDGE_NODE}`,
+        `FERRY_NODE 指向的路径不存在：${process.env.FERRY_NODE}`,
         '改成真实 node.exe 的完整路径，或删掉这个环境变量让它自动查找。',
       );
     }
-    return process.env.BRIDGE_NODE;
+    return process.env.FERRY_NODE;
   }
   const isSea = basename(process.execPath).toLowerCase() !== 'node.exe';
   if (!isSea) return process.execPath;
@@ -75,7 +75,7 @@ export function requireNodeExe(purpose) {
   if (exe) return exe;
   throw new BridgeError(
     `没有找到 Node.js，${purpose}需要它才能运行`,
-    '这个 exe 本身不依赖 Node，但调用 codex / claude 这类用 JavaScript 写的 CLI 时需要。装一个 Node.js（选 LTS 版）即可；已经装了的，把 node.exe 所在目录加进 PATH，或设环境变量 BRIDGE_NODE 指向 node.exe 的完整路径。',
+    '这个 exe 本身不依赖 Node，但调用 codex / claude 这类用 JavaScript 写的 CLI 时需要。装一个 Node.js（选 LTS 版）即可；已经装了的，把 node.exe 所在目录加进 PATH，或设环境变量 FERRY_NODE 指向 node.exe 的完整路径。',
   );
 }
 

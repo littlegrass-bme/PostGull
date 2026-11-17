@@ -1,4 +1,4 @@
-// 构建：把 src 打成单文件 CJS，再注入 Node SEA，产出 agent-bridge.exe。
+// 构建：把 src 打成单文件 CJS，再注入 Node SEA，产出 ferry.exe。
 // 构建期依赖装在 build/node_modules，不进发布包。
 //
 // 用法：node build/build.mjs
@@ -13,7 +13,7 @@ const root = join(here, '..');
 const outDir = join(root, 'dist');
 const bundle = join(here, 'bundle.cjs');
 const blob = join(here, 'sea-prep.blob');
-const exe = join(outDir, 'agent-bridge.exe');
+const exe = join(outDir, 'ferry.exe');
 
 function run(cmd, args, opts = {}) {
   console.log(`> ${cmd} ${args.join(' ')}`);
@@ -31,7 +31,7 @@ run(process.execPath, [
   `--outfile=${bundle}`,
   '--minify-syntax',
   '--legal-comments=none',
-  '--banner:js=// agent-bridge single-file bundle',
+  '--banner:js=// ferry single-file bundle',
 ]);
 
 // 2. 生成 SEA blob
@@ -72,6 +72,6 @@ const version = execFileSync(exe, ['version'], { encoding: 'utf8' }).trim();
 console.log(`\n构建完成：${exe}`);
 console.log(`自检输出：${version}`);
 console.log(`体积：${(readFileSync(exe).length / 1024 / 1024).toFixed(1)} MB`);
-if (!/^agent-bridge /.test(version)) {
+if (!/^ferry /.test(version)) {
   throw new Error('exe 冒烟测试失败：version 输出不符合预期');
 }

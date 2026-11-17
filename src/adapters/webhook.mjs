@@ -15,7 +15,7 @@ export const webhook = {
   async send(cfg, sw, session, message) {
     if (!sw.options.url) throw new BridgeError(`webhook 软件 ${sw.id} 缺少 options.url`);
     const body = {
-      from: cfg.bridgeName || 'agent-bridge',
+      from: cfg.bridgeName || 'ferry',
       to: { alias: session.alias, software: session.software, category: session.category, id: session.id },
       token: message.match(/【唯一凭证：([^】]+)】/)?.[1] || null,
       text: message,

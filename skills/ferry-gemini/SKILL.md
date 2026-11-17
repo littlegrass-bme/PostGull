@@ -1,9 +1,9 @@
 ---
-name: agent-bridge-gemini
-description: 在 Gemini / Antigravity 里通过 agent-bridge 向 DeepSeek Harness、Codex 或其他已接入软件发消息、查看积压。当需要跨软件同步、派活、或确认对方是否收到时使用。
+name: ferry-gemini
+description: 在 Gemini / Antigravity 里通过 ferry 向 DeepSeek Harness、Codex 或其他已接入软件发消息、查看积压。当需要跨软件同步、派活、或确认对方是否收到时使用。
 ---
 
-# agent-bridge（Gemini / Antigravity 侧）
+# ferry（Gemini / Antigravity 侧）
 
 跨软件消息桥。这条通道有两个硬限制，都来自 Antigravity 本身：
 
@@ -13,9 +13,9 @@ description: 在 Gemini / Antigravity 里通过 agent-bridge 向 DeepSeek Harnes
 ## 先看现状
 
 ```powershell
-agent-bridge list
-agent-bridge queue
-agent-bridge doctor
+ferry list
+ferry queue
+ferry doctor
 ```
 
 `doctor` 会打印当前打开的是哪个对话，以及是否开了多个。开着多个时先关到只剩一个。
@@ -28,14 +28,14 @@ $body = @'
 '@
 $summary = '说清要对方做什么，300 字内'
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($body))
-$b64 | agent-bridge send --to dsh-work --from "Gemini" --summary $summary --expect report
+$b64 | ferry send --to dsh-work --from "Gemini" --summary $summary --expect report
 ```
 
 ## 收消息
 
 ```powershell
-agent-bridge receive --to gemini-work
-agent-bridge flush gemini-work
+ferry receive --to gemini-work
+ferry flush gemini-work
 ```
 
 `receive` 会把正文完整打出来，然后从信箱移除并归档，最后给出点名回执。把回执用 `send` 发回对方，并带上你自己的凭证。

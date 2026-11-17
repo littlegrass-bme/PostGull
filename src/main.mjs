@@ -15,13 +15,13 @@ import {
 } from './core.mjs';
 import { runAdmin } from './admin.mjs';
 
-const HELP = `agent-bridge ${VERSION}
+const HELP = `ferry ${VERSION}
 
 用法：
-  agent-bridge <命令> [参数]
+  ferry <命令> [参数]
 
 命令：
-  init                     交互式生成 bridge.config.json
+  init                     交互式生成 ferry.config.json
   list                     列出软件、类别与会话
   doctor                   自检：配置、通道连通性、信箱、锁
   send                     发一条消息
@@ -48,8 +48,8 @@ send 参数：
   --no-wait                投递后不提示等待回复
 
 示例：
-  agent-bridge send --to dsh-bridge --summary "请复核这份结论" --body-file .\\reply.md
-  $b64 | agent-bridge send --to gemini-work --summary "跑完了，附实测数字" --encoding base64
+  ferry send --to dsh-bridge --summary "请复核这份结论" --body-file .\\reply.md
+  $b64 | ferry send --to gemini-work --summary "跑完了，附实测数字" --encoding base64
 `;
 
 function parseArgs(argv) {
@@ -164,7 +164,7 @@ async function cmdSend(cfg, flags, positional) {
     console.log('测试模式：本条会在正文里打【测试】标记，且只允许发往非 work 类会话。');
   }
 
-  const from = String(flag(flags, 'from', cfg.bridgeName || 'agent-bridge'));
+  const from = String(flag(flags, 'from', cfg.bridgeName || 'ferry'));
   const token = `BRG-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const hs = sleepState(cfg);
   const msg = buildMessage({ from, token, summary, text, expect, sleepOn: hs.on });
@@ -203,7 +203,7 @@ async function cmdSend(cfg, flags, positional) {
     console.log(`信箱: ${queueFileFor(cfg, target)}`);
     console.log(`编号: ${r.record.id}`);
     console.log(`原因: ${r.reason}`);
-    console.log(`激活后执行：agent-bridge flush ${target.alias}`);
+    console.log(`激活后执行：ferry flush ${target.alias}`);
   }
   return 0;
 }
@@ -303,7 +303,7 @@ function cmdStale(cfg, flags) {
   for (const s of stale) {
     console.log(`  ${s.alias}  ${s.id}  等待 ${s.waitingHours} 小时  来自 ${s.from}`);
     console.log(`    摘要: ${s.summary || '(无)'}`);
-    console.log(`    补投: agent-bridge flush ${s.alias}`);
+    console.log(`    补投: ferry flush ${s.alias}`);
   }
   return 1;
 }
@@ -329,7 +329,7 @@ async function cmdWatch(cfg, flags) {
       const lines = stale.map((s) => `- ${s.alias} ${s.id} 等待 ${s.waitingHours} 小时：${s.summary || '(无摘要)'}`).join('\n');
       const token = `BRG-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const msg = buildMessage({
-        from: 'agent-bridge-watch',
+        from: 'ferry-watch',
         token,
         summary: `信箱告警：${stale.length} 条消息超过 ${hours} 小时未投递，请检查目标是否休眠并执行 flush。`,
         text: lines,
@@ -337,7 +337,7 @@ async function cmdWatch(cfg, flags) {
         sleepOn: sleepState(cfg).on,
       });
       try {
-        await sendNow(cfg, target, msg, { token, summary: '信箱告警', from: 'agent-bridge-watch', text: lines, expect: 'report' });
+        await sendNow(cfg, target, msg, { token, summary: '信箱告警', from: 'ferry-watch', text: lines, expect: 'report' });
         console.log(`  已向 ${target.alias} 发出告警`);
       } catch (e) {
         console.log(`  告警发送失败：${e.message}`);
@@ -369,7 +369,7 @@ function parseInterval(s) {
 
 export async function main(argv) {
   // --config 允许写在命令前后任意位置：先全局扫一遍去掉，否则
-  // `agent-bridge --config x list` 会把 --config 当成命令名。
+  // `ferry --config x list` 会把 --config 当成命令名。
   let configArg = null;
   const stripped = [];
   for (let i = 0; i < argv.length; i++) {
@@ -399,7 +399,7 @@ export async function main(argv) {
     return 0;
   }
   if (cmd === 'version' || cmd === '--version') {
-    console.log(`agent-bridge ${VERSION}`);
+    console.log(`ferry ${VERSION}`);
     return 0;
   }
 
@@ -426,7 +426,7 @@ export async function main(argv) {
     }
     return 0;
   }
-  throw new BridgeError(`未知命令：${cmd}`, '运行 agent-bridge help 看可用命令。');
+  throw new BridgeError(`未知命令：${cmd}`, '运行 ferry help 看可用命令。');
 }
 
 // 入口即执行。SEA 打包后没有可用的 require.main 判断，统一走这里。
@@ -440,7 +440,7 @@ main(process.argv.slice(2))
       if (e.hint) console.error(`提示：${e.hint}`);
     } else {
       console.error(`未预期错误：${e.message}`);
-      if (process.env.BRIDGE_DEBUG) console.error(e.stack);
+      if (process.env.FERRY_DEBUG) console.error(e.stack);
     }
     process.exitCode = 1;
   });
