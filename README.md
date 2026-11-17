@@ -36,6 +36,17 @@ ferry.exe init
 
 打开配置，把 `sessions` 里每个 `id` 换成真实的会话标识。每个软件同一类别下只需要登记一个活跃会话，换对话时改这一处就行。
 
+「会话 id」是什么、去哪儿找：
+
+| 软件 | 怎么找 |
+|---|---|
+| Antigravity / Gemini | 打开那个对话，地址栏或窗口 URL 里 `/c/` 后面那串 36 位 UUID |
+| Codex | `codex resume` 列表里显示的 thread id，或 `%USERPROFILE%\.codex\sessions\` 下 rollout 文件名末尾那一串 |
+| DeepSeek Harness | 会话顶栏或会话列表里的 `session-` 开头的标识 |
+| Claude | `claude --resume` 列表里的 session id |
+
+配置放哪儿都行，按这个顺序找：当前目录 → exe 所在目录 → `%APPDATA%\Ferry\ferry.config.json`。想让 exe 放进 PATH 后在任意目录都能用，把配置放到第三处即可。也可以设 `FERRY_CONFIG` 指向任意路径。
+
 **三、自检**
 
 ```powershell
@@ -95,15 +106,9 @@ ferry.exe send --to dsh-bridge --summary "请复核这四条结论" --body-file 
 
 **exe 没有代码签名。** 首次运行 Windows 可能提示「未知发布者」，选「仍要运行」。自己从源码构建也一样。
 
-**Antigravity 只能给已经打开的对话发消息。** 这是它的调试协议限制，不是本工具的取舍。没开窗口就只能进信箱。
+**Antigravity 依赖前台可见的窗口。** 它只能给已经打开的对话发消息，没开的只能进信箱。而且建议同时只开一个，开多个时消息落到哪个窗口由界面决定，工具决定不了。两条都来自它的调试协议，不是本工具的取舍。
 
-**Antigravity 建议同时只开一个对话。** 开多个时，消息落到哪个窗口由界面决定，工具决定不了。
-
-**Claude 通道没有真实适配过。** Claude Code 没有「往指定会话写消息」的官方命令，这里用 `claude -p --resume` 模拟，拿不到「已接受」凭证。所以这个通道一律标「未确认」，不假装成功。等它在真实环境跑通再当正式功能用。
-
-**Codex 通道只能写不能读。** 回执只说「已入队」，代表消息写进了对方队列，不代表对方读过。
-
-**Codex 和 Claude 通道需要本机有 Node.js。** 这两个 CLI 是 JavaScript 写的，工具要找 `node.exe` 来跑它们。找不到会给明确提示，不会抛一堆英文报错。`dsh`、`antigravity`、`webhook` 三个通道不需要 Node。
+**CLI 适配器各有特性。** Codex 只能写不能读，回执说「已入队」不代表对方读过。Claude 通道没真实适配过，用 `claude -p --resume` 模拟，拿不到「已接受」凭证，一律标「未确认」。这两个通道还需要本机装 Node.js（它们是 JavaScript 写的），找不到会给明确提示；`dsh`、`antigravity`、`webhook` 三个通道不需要 Node。
 
 ### 三种回复
 
@@ -155,8 +160,10 @@ It reports which channels reach their app, which do not, and whether anything is
 **4. Send something**
 
 ```powershell
-ferry.exe send --to dsh-bridge --summary "Please review these four conclusions" --body-file .\reply.md
+ferry.exe send --to <alias from ferry list> --summary "Please review these four conclusions" --body-file .\reply.md
 ```
+
+The alias is whatever you named a session in your config. Run `ferry list` to see them.
 
 ### Commands
 
@@ -203,15 +210,9 @@ On first run it looks for `ferry.config.json` in the working directory and tells
 
 **The exe is not code-signed.** Windows SmartScreen may warn about an unknown publisher on first run. Building it yourself makes no difference.
 
-**Antigravity can only receive in a conversation that is already open.** Its debug protocol offers no way to target a closed conversation. Closed means mailbox.
+**Antigravity needs a visible foreground window.** It can only deliver into a conversation that is already open; closed means mailbox. Keep one open at a time, since with several open the UI decides which window receives. Both limits come from its debug protocol, not from this tool.
 
-**Keep one Antigravity conversation open at a time.** With several open, which window receives is decided by the UI, not by the tool.
-
-**The Claude channel has never been properly adapted.** Claude Code has no official command for writing into a specific session, so this uses `claude -p --resume` and cannot obtain an acceptance receipt. Every message on that channel is marked unconfirmed rather than claimed as delivered.
-
-**The Codex channel is write-only.** The receipt says queued, which means the message reached the queue, not that anyone read it.
-
-**Codex and Claude channels need Node.js installed.** Both CLIs are JavaScript; the tool locates `node.exe` to run them. It reports clearly when Node is missing. The `dsh`, `antigravity` and `webhook` channels do not need Node.
+**The CLI adapters have their own quirks.** Codex is write-only: a receipt saying queued means the message reached the queue, not that anyone read it. The Claude channel has never been properly adapted, uses `claude -p --resume`, and cannot obtain an acceptance receipt, so every message there is marked unconfirmed. Both channels need Node.js installed since those CLIs are JavaScript; the tool says so plainly when Node is missing. The `dsh`, `antigravity` and `webhook` channels do not need Node.
 
 ### Reply protocol
 

@@ -34,11 +34,14 @@ run(process.execPath, [
   '--banner:js=// ferry single-file bundle',
 ]);
 
-// 2. 生成 SEA blob
+// 2. 生成 SEA blob。
+// 路径写成相对 root 的形式，不写绝对路径：sea-config.json 会留在本地磁盘上，
+// 万一被误提交，也不该暴露构建机器是哪个盘、哪个用户名。run() 的 cwd 就是 root。
 const seaConfig = join(here, 'sea-config.json');
+const rel = (p) => p.slice(root.length + 1).replace(/\\/g, '/');
 writeFileSync(seaConfig, JSON.stringify({
-  main: bundle,
-  output: blob,
+  main: rel(bundle),
+  output: rel(blob),
   disableExperimentalSEAWarning: true,
   useSnapshot: false,
   useCodeCache: false,

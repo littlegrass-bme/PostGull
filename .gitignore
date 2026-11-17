@@ -1,7 +1,7 @@
 # 本地配置：含真实会话 id 与本机路径，绝不入库
-bridge.config.json
+ferry.config.json
 *.config.json
-!bridge.config.example.json
+!ferry.config.example.json
 
 # 信箱：含消息正文与凭证，绝不入库
 queue/
