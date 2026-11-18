@@ -1,13 +1,15 @@
 # 本地配置：含真实会话 id 与本机路径，绝不入库
-ferry.config.json
+postgull.config.json
 *.config.json
-!ferry.config.example.json
+!postgull.config.example.json
 
 # 信箱：含消息正文与凭证，绝不入库
 queue/
 **/queue/
 *.jsonl
 !skills/**/*.jsonl
+# 归档里的凭证号与消息正文同样敏感，连归档一起挡
+queue/archive.jsonl
 
 # 构建产物与构建期依赖
 dist/
@@ -16,6 +18,10 @@ build/bundle.cjs
 build/sea-prep.blob
 build/sea-config.json
 build/package-lock.json
+
+# Python 构建脚本的字节码缓存
+__pycache__/
+*.pyc
 
 # 测试与临时
 .test/

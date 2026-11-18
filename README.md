@@ -5,7 +5,7 @@
 A small tool that lets your AI apps talk to each other.
 
 ```
-postgull.exe send --to gemini-work --summary "跑完了，附实测数字" --body-file result.md
+postgull.exe send --to my-gemini --summary "跑完了，附实测数字" --body-file result.md
 ```
 
 ---
@@ -58,8 +58,10 @@ postgull.exe doctor
 **四、发第一条**
 
 ```powershell
-postgull.exe send --to dsh-bridge --summary "请复核这四条结论" --body-file .\reply.md
+postgull.exe send --to <postgull list 里看到的别名> --summary "请复核这四条结论" --body-file .\reply.md
 ```
+
+别名就是你在配置里给会话起的名字，跑 `postgull list` 能看到全部。
 
 ### 常用命令
 
@@ -148,6 +150,17 @@ postgull.exe init
 **2. Fill in session ids**
 
 Open `postgull.config.json` and replace each placeholder `id` under `sessions` with a real session identifier. One active session per app per category is enough; when you switch conversations, edit that one field.
+
+Where to find each id:
+
+| App | Where |
+|---|---|
+| Antigravity / Gemini | The 36-character UUID after `/c/` in the conversation's URL |
+| Codex | The thread id shown by `codex resume`, or the trailing id in a rollout filename under `%USERPROFILE%\.codex\sessions\` |
+| DeepSeek Harness | The `session-` prefixed identifier in the session list or title bar |
+| Claude | The session id shown by `claude --resume` |
+
+The config is looked up in this order: current directory, then the exe's directory, then `%APPDATA%\PostGull\postgull.config.json`. Put it in the third location if you want the exe on PATH to work from any directory. `POSTGULL_CONFIG` overrides all of it.
 
 **3. Check the setup**
 

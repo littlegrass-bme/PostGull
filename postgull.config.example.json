@@ -8,7 +8,7 @@
     "note": "带 --test 的消息不允许发往这些类别。work 是干活的会话，拿它做通道自测会把垃圾消息灌进业务对话。"
   },
   "aliasesOfSameSession": false,
-  "aliasesOfSameSessionNote": "同一会话 id 挂了多个别名时，是否允许一次 receive 聚合取多个队列。默认 false，因为跨文件取件正是 2026-11-16 误取件事故的模式，务必确认这些别名真的属于同一个对话再打开。",
+  "aliasesOfSameSessionNote": "同一会话 id 挂了多个别名时，是否允许一次 receive 聚合取多个队列。默认 false，因为跨文件取件曾导致误取其他会话的消息，务必确认这些别名真的属于同一个对话再打开。",
   "humanSleeping": false,
   "humanSleepingSince": null,
   "humanSleepingNote": "人类在线",

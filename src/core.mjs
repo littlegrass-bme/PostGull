@@ -274,7 +274,7 @@ function writeBackOne(file, rec) {
 //
 // 另一个必须挡的：记录的 to 与本队列不一致时一律不取。
 // 队列里混进别人的消息，通常是手工投错位置或发送方写错软件/类别，
-// 这时替人签收，消息真正的主人就永远收不到了（2026-11-16 真实发生过）。
+// 这时替人签收，消息真正的主人就永远收不到了。
 export function receive(cfg, session, onlyId) {
   const file = queueFileFor(cfg, session);
   const own = receiveOne(cfg, session, file, onlyId);
