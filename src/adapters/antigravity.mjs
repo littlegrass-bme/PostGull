@@ -108,7 +108,7 @@ export const antigravity = {
   async send(cfg, sw, session, message, opts = {}) {
     const state = await this.wakeState(cfg, sw, session);
     if (state.asleep) {
-      const err = new BridgeError(state.reason, '在 Antigravity 界面切到该对话并保持打开，再执行 `ferry flush <别名>`。');
+      const err = new BridgeError(state.reason, '在 Antigravity 界面切到该对话并保持打开，再执行 `postgull flush <别名>`。');
       err.sleeping = true;
       throw err;
     }
@@ -214,7 +214,7 @@ export const antigravity = {
 
     // 注入成功不等于对方收下。以 transcript 里出现含凭证的 USER_INPUT 为唯一判据。
     const token = message.match(/【唯一凭证：([^】]+)】/)?.[1] || '';
-    const deadline = Date.now() + Number(opts.waitMs ?? process.env.FERRY_WAIT_MS ?? 45000);
+    const deadline = Date.now() + Number(opts.waitMs ?? process.env.POSTGULL_WAIT_MS ?? 45000);
     let cursor = offset;
     while (Date.now() < deadline) {
       const { text, offset: next } = readFrom(transcript, cursor);

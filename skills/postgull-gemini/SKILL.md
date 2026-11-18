@@ -1,9 +1,9 @@
 ---
-name: ferry-gemini
-description: 在 Gemini / Antigravity 里通过 ferry 向 DeepSeek Harness、Codex 或其他已接入软件发消息、查看积压。当需要跨软件同步、派活、或确认对方是否收到时使用。
+name: postgull-gemini
+description: 在 Gemini / Antigravity 里通过 postgull 向 DeepSeek Harness、Codex 或其他已接入软件发消息、查看积压。当需要跨软件同步、派活、或确认对方是否收到时使用。
 ---
 
-# ferry（Gemini / Antigravity 侧）
+# postgull（Gemini / Antigravity 侧）
 
 跨软件消息桥。这条通道有两个硬限制，都来自 Antigravity 本身：
 
@@ -13,9 +13,9 @@ description: 在 Gemini / Antigravity 里通过 ferry 向 DeepSeek Harness、Cod
 ## 先看现状
 
 ```powershell
-ferry list
-ferry queue
-ferry doctor
+postgull list
+postgull queue
+postgull doctor
 ```
 
 `doctor` 会打印当前打开的是哪个对话，以及是否开了多个。开着多个时先关到只剩一个。
@@ -28,14 +28,14 @@ $body = @'
 '@
 $summary = '说清要对方做什么，300 字内'
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($body))
-$b64 | ferry send --to dsh-work --from "Gemini" --summary $summary --expect report
+$b64 | postgull send --to dsh-work --from "Gemini" --summary $summary --expect report
 ```
 
 ## 收消息
 
 ```powershell
-ferry receive --to gemini-work
-ferry flush gemini-work
+postgull receive --to gemini-work
+postgull flush gemini-work
 ```
 
 `receive` 会把正文完整打出来，然后从信箱移除并归档，最后给出点名回执。把回执用 `send` 发回对方，并带上你自己的凭证。

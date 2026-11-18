@@ -1,4 +1,4 @@
-// 构建：把 src 打成单文件 CJS，再注入 Node SEA，产出 ferry.exe。
+// 构建：把 src 打成单文件 CJS，再注入 Node SEA，产出 postgull.exe。
 // 构建期依赖装在 build/node_modules，不进发布包。
 //
 // 用法：node build/build.mjs
@@ -13,7 +13,7 @@ const root = join(here, '..');
 const outDir = join(root, 'dist');
 const bundle = join(here, 'bundle.cjs');
 const blob = join(here, 'sea-prep.blob');
-const exe = join(outDir, 'ferry.exe');
+const exe = join(outDir, 'postgull.exe');
 
 function run(cmd, args, opts = {}) {
   console.log(`> ${cmd} ${args.join(' ')}`);
@@ -31,7 +31,7 @@ run(process.execPath, [
   `--outfile=${bundle}`,
   '--minify-syntax',
   '--legal-comments=none',
-  '--banner:js=// ferry single-file bundle',
+  '--banner:js=// postgull single-file bundle',
 ]);
 
 // 2. 生成 SEA blob。
@@ -70,11 +70,77 @@ run(process.execPath, [
   'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
 ]);
 
-// 4. 冒烟：必须能打印版本
+// 4. 写图标与版本信息。
+// 顺序必须在 postject 之后：postject 会重写 PE 结构，先打的图标会被覆盖掉。
+//
+// 为什么用 python 而不是 rcedit：实测 rcedit 在 88 MB 的 SEA exe 上会永久挂住，
+// 只设版本信息也要挂 12 分钟以上。patch-res.py 直接调 Windows 资源 API
+// （BeginUpdateResourceW / UpdateResourceW / EndUpdateResourceW），实测 0.8 秒。
+const ico = join(here, 'postgull.ico');
+const patcher = join(here, 'patch-res.py');
+
+// 找 Python：写资源只需要标准库 ctypes，任何 Python 3 都行。
+// 不写死安装路径：先看环境变量，再试命令名，最后读 conda / py 启动器自己记录的位置。
+function findPython() {
+  if (process.env.POSTGULL_PYTHON) return process.env.POSTGULL_PYTHON;
+
+  const ok = (c) => {
+    try {
+      const out = execFileSync(c, ['-c', 'import sys;print(sys.version_info[0])'], {
+        encoding: 'utf8', timeout: 10000, windowsHide: true,
+      }).trim();
+      return out === '3';
+    } catch { return false; }
+  };
+
+  for (const c of ['python', 'python3', 'py']) {
+    if (ok(c)) return c;
+  }
+
+  // conda 会把自己装过的环境写进 ~/.conda/environments.txt。
+  // 这比猜盘符可靠：机器上装在哪，它自己最清楚。
+  const envList = join(process.env.USERPROFILE || '', '.conda', 'environments.txt');
+  if (existsSync(envList)) {
+    for (const line of readFileSync(envList, 'utf8').split(/\r?\n/)) {
+      const dir = line.trim();
+      if (!dir) continue;
+      const exe = join(dir, 'python.exe');
+      if (existsSync(exe) && ok(exe)) return exe;
+    }
+  }
+
+  // py 启动器会列出所有已注册的解释器。
+  try {
+    const out = execFileSync('py', ['-0p'], { encoding: 'utf8', timeout: 10000, windowsHide: true });
+    for (const m of out.matchAll(/([A-Za-z]:\\[^\r\n]*?python\.exe)/gi)) {
+      if (existsSync(m[1]) && ok(m[1])) return m[1];
+    }
+  } catch { /* 没装 py */ }
+
+  return null;
+}
+
+if (existsSync(ico) && existsSync(patcher)) {
+  const py = findPython();
+  if (!py) {
+    console.warn('找不到 Python 3，跳过图标写入。装一个 Python 或设 POSTGULL_PYTHON 指向 python.exe。');
+  } else {
+    try {
+      execFileSync(py, [patcher, exe, ico], { stdio: 'inherit', cwd: root, windowsHide: true });
+      console.log(`已写入图标与版本信息（${py}）`);
+    } catch (e) {
+      console.warn(`写图标失败（跳过，exe 仍可用）：${e.message}`);
+    }
+  }
+} else {
+  console.warn(`缺图标或补丁脚本，跳过：${ico} / ${patcher}`);
+}
+
+// 5. 冒烟：必须能打印版本
 const version = execFileSync(exe, ['version'], { encoding: 'utf8' }).trim();
 console.log(`\n构建完成：${exe}`);
 console.log(`自检输出：${version}`);
 console.log(`体积：${(readFileSync(exe).length / 1024 / 1024).toFixed(1)} MB`);
-if (!/^ferry /.test(version)) {
+if (!/^postgull /.test(version)) {
   throw new Error('exe 冒烟测试失败：version 输出不符合预期');
 }

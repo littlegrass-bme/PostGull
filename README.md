@@ -1,11 +1,11 @@
-# Ferry 摆渡
+# PostGull 信鸥
 
 让同时开着的几个 AI 软件互相说话。
 
 A small tool that lets your AI apps talk to each other.
 
 ```
-ferry.exe send --to gemini-work --summary "跑完了，附实测数字" --body-file result.md
+postgull.exe send --to gemini-work --summary "跑完了，附实测数字" --body-file result.md
 ```
 
 ---
@@ -18,7 +18,7 @@ ferry.exe send --to gemini-work --summary "跑完了，附实测数字" --body-f
 
 复制粘贴有三个问题：长文本粘不全，对方忙的时候会漏，事后查不到到底发出去没有。
 
-Ferry 给它们接一条线。命令行发一条消息，落到对方对话里；对方没开窗口，消息存进信箱，等它开了再送；每一跳都有凭证，随时能查。
+PostGull 给它们接一条线。命令行发一条消息，落到对方对话里；对方没开窗口，消息存进信箱，等它开了再送；每一跳都有凭证，随时能查。
 
 它不是 API 额度中转，也不代理模型调用。只做一件事：把一段文字从 A 软件的对话送到 B 软件的对话，并且让你知道送到了没有。
 
@@ -27,10 +27,10 @@ Ferry 给它们接一条线。命令行发一条消息，落到对方对话里�
 **一、生成配置**
 
 ```powershell
-ferry.exe init
+postgull.exe init
 ```
 
-当前目录生成 `ferry.config.json`。
+当前目录生成 `postgull.config.json`。
 
 **二、填会话 id**
 
@@ -45,12 +45,12 @@ ferry.exe init
 | DeepSeek Harness | 会话顶栏或会话列表里的 `session-` 开头的标识 |
 | Claude | `claude --resume` 列表里的 session id |
 
-配置放哪儿都行，按这个顺序找：当前目录 → exe 所在目录 → `%APPDATA%\Ferry\ferry.config.json`。想让 exe 放进 PATH 后在任意目录都能用，把配置放到第三处即可。也可以设 `FERRY_CONFIG` 指向任意路径。
+配置放哪儿都行，按这个顺序找：当前目录 → exe 所在目录 → `%APPDATA%\PostGull\postgull.config.json`。想让 exe 放进 PATH 后在任意目录都能用，把配置放到第三处即可。也可以设 `POSTGULL_CONFIG` 指向任意路径。
 
 **三、自检**
 
 ```powershell
-ferry.exe doctor
+postgull.exe doctor
 ```
 
 它会告诉你哪个通道能通、哪个连不上、信箱里有没有积压。
@@ -58,21 +58,21 @@ ferry.exe doctor
 **四、发第一条**
 
 ```powershell
-ferry.exe send --to dsh-bridge --summary "请复核这四条结论" --body-file .\reply.md
+postgull.exe send --to dsh-bridge --summary "请复核这四条结论" --body-file .\reply.md
 ```
 
 ### 常用命令
 
 | 命令 | 作用 |
 |---|---|
-| `ferry send --to <目标>` | 发一条消息 |
-| `ferry list` | 看有哪些软件、类别、会话 |
-| `ferry doctor` | 体检：通道、配置、信箱、锁 |
-| `ferry queue` | 看信箱积压 |
-| `ferry receive --to <自己>` | 从信箱收取发给自己的消息 |
-| `ferry flush <目标>` | 把信箱里待投的补发出去 |
-| `ferry watch --hours 2` | 定期巡检，发现卡住的消息就告警 |
-| `ferry archive --tail 10` | 查归档，确认某条到底发没发 |
+| `postgull send --to <目标>` | 发一条消息 |
+| `postgull list` | 看有哪些软件、类别、会话 |
+| `postgull doctor` | 体检：通道、配置、信箱、锁 |
+| `postgull queue` | 看信箱积压 |
+| `postgull receive --to <自己>` | 从信箱收取发给自己的消息 |
+| `postgull flush <目标>` | 把信箱里待投的补发出去 |
+| `postgull watch --hours 2` | 定期巡检，发现卡住的消息就告警 |
+| `postgull archive --tail 10` | 查归档，确认某条到底发没发 |
 
 ### 消息为什么发不出去
 
@@ -88,7 +88,7 @@ ferry.exe send --to dsh-bridge --summary "请复核这四条结论" --body-file 
 
 不看命令返回什么，看三个地方：
 
-1. `ferry queue` 里该目标零积压。
+1. `postgull queue` 里该目标零积压。
 2. 对方对话里能搜到本次凭证号。
 3. 对方回复里引用了这个凭证。
 
@@ -96,9 +96,9 @@ ferry.exe send --to dsh-bridge --summary "请复核这四条结论" --body-file 
 
 ### 装给别人用
 
-把 `dist\ferry.exe` 拷过去，双击或命令行运行。不需要装 Node，不需要 Python。
+把 `dist\postgull.exe` 拷过去，双击或命令行运行。不需要装 Node，不需要 Python。
 
-第一次运行会在当前目录找 `ferry.config.json`，找不到就提示怎么生成。
+第一次运行会在当前目录找 `postgull.config.json`，找不到就提示怎么生成。
 
 ### 已知限制
 
@@ -133,7 +133,7 @@ You run several AI apps at once: DeepSeek Harness, Codex, Antigravity (Gemini). 
 
 Copy and paste fails in three ways. Long text gets truncated. Messages vanish while the other side is busy. Later you cannot tell whether anything was sent at all.
 
-Ferry wires them together. Send a message from the command line and it lands in the target conversation. If that window is closed, the message waits in a mailbox until it opens. Every hop gets a receipt, so you can always check.
+PostGull wires them together. Send a message from the command line and it lands in the target conversation. If that window is closed, the message waits in a mailbox until it opens. Every hop gets a receipt, so you can always check.
 
 This is not an API quota relay and does not proxy model calls. It moves text from one AI conversation to another, and tells you whether it arrived.
 
@@ -142,17 +142,17 @@ This is not an API quota relay and does not proxy model calls. It moves text fro
 **1. Create a config**
 
 ```powershell
-ferry.exe init
+postgull.exe init
 ```
 
 **2. Fill in session ids**
 
-Open `ferry.config.json` and replace each placeholder `id` under `sessions` with a real session identifier. One active session per app per category is enough; when you switch conversations, edit that one field.
+Open `postgull.config.json` and replace each placeholder `id` under `sessions` with a real session identifier. One active session per app per category is enough; when you switch conversations, edit that one field.
 
 **3. Check the setup**
 
 ```powershell
-ferry.exe doctor
+postgull.exe doctor
 ```
 
 It reports which channels reach their app, which do not, and whether anything is stuck in a mailbox.
@@ -160,23 +160,23 @@ It reports which channels reach their app, which do not, and whether anything is
 **4. Send something**
 
 ```powershell
-ferry.exe send --to <alias from ferry list> --summary "Please review these four conclusions" --body-file .\reply.md
+postgull.exe send --to <alias from postgull list> --summary "Please review these four conclusions" --body-file .\reply.md
 ```
 
-The alias is whatever you named a session in your config. Run `ferry list` to see them.
+The alias is whatever you named a session in your config. Run `postgull list` to see them.
 
 ### Commands
 
 | Command | What it does |
 |---|---|
-| `ferry send --to <target>` | Send one message |
-| `ferry list` | Show apps, categories, sessions |
-| `ferry doctor` | Health check: channels, config, mailboxes, locks |
-| `ferry queue` | Show mailbox backlog |
-| `ferry receive --to <self>` | Take messages addressed to you |
-| `ferry flush <target>` | Deliver everything waiting for that target |
-| `ferry watch --hours 2` | Periodic check, alert on stuck messages |
-| `ferry archive --tail 10` | Search the archive to confirm a send |
+| `postgull send --to <target>` | Send one message |
+| `postgull list` | Show apps, categories, sessions |
+| `postgull doctor` | Health check: channels, config, mailboxes, locks |
+| `postgull queue` | Show mailbox backlog |
+| `postgull receive --to <self>` | Take messages addressed to you |
+| `postgull flush <target>` | Deliver everything waiting for that target |
+| `postgull watch --hours 2` | Periodic check, alert on stuck messages |
+| `postgull archive --tail 10` | Search the archive to confirm a send |
 
 ### When a message does not go through
 
@@ -192,7 +192,7 @@ Each case names the blocker. None of them pretend to succeed.
 
 Do not trust the exit code. Check three things:
 
-1. `ferry queue` shows zero backlog for that target.
+1. `postgull queue` shows zero backlog for that target.
 2. The receipt id is searchable in the target conversation.
 3. The reply quotes that receipt.
 
@@ -200,9 +200,9 @@ The third is the only real proof. The first two together still only show the mes
 
 ### Sharing it
 
-Copy `dist\ferry.exe` and run it. No Node, no Python, no installer.
+Copy `dist\postgull.exe` and run it. No Node, no Python, no installer.
 
-On first run it looks for `ferry.config.json` in the working directory and tells you how to create one if it is missing.
+On first run it looks for `postgull.config.json` in the working directory and tells you how to create one if it is missing.
 
 ### Known limits
 
@@ -235,7 +235,7 @@ Use `--expect report` when assigning work and `--expect ack` for announcements.
 
 ### 架构
 
-配置驱动。`ferry.config.json` 定义软件、类别、会话，每个软件对应一个适配器。内置 `dsh`、`codex`、`antigravity`、`claude`、`webhook` 五个。
+配置驱动。`postgull.config.json` 定义软件、类别、会话，每个软件对应一个适配器。内置 `dsh`、`codex`、`antigravity`、`claude`、`webhook` 五个。
 
 五个适配器的投递方式各不相同：
 
@@ -269,7 +269,7 @@ Use `--expect report` when assigning work and `--expect ack` for announcements.
 
 ```powershell
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($body))
-$b64 | ferry.exe send --to dsh-work --summary "..." --encoding base64
+$b64 | postgull.exe send --to dsh-work --summary "..." --encoding base64
 ```
 
 base64 是纯 ASCII，编解码一轮哈希一致。工具会做往返校验，不一致就拒绝发送。
@@ -288,16 +288,28 @@ npm install
 node build.mjs
 ```
 
-esbuild 打成单文件 CJS，Node SEA 注入 `node.exe` 副本，postject 写 blob。产物 `dist/ferry.exe`，约 88 MB。
+esbuild 打成单文件 CJS，Node SEA 注入 `node.exe` 副本，postject 写 blob，最后用 `patch-res.py` 写入图标与版本信息。产物 `dist/postgull.exe`，约 88 MB。
+
+图标与版本信息这一步需要 Python 3（只用标准库 `ctypes`，不需要 Pillow）。脚本按这个顺序找解释器：环境变量 `POSTGULL_PYTHON` → `python` / `python3` / `py` 命令 → conda 自己记录的 `~/.conda/environments.txt` → `py -0p` 列出的路径。都找不到就跳过，exe 仍能正常运行，只是图标是 Node 默认的、属性页显示 Node.js。
+
+两个踩过的坑，写下来省得重走：
+
+`rcedit` 在 88 MB 的 SEA exe 上会永久挂住，只设版本信息也要挂十几分钟不返回，不能用。
+
+纯 JS 的 `resedit` 能改图标，但版本信息的 `setStringValues` 与 `setFileVersion` 写回文件后会被还原，读回来仍是 Node.js。新建块、原地改、调换删除顺序都试过，均无效。
+
+最终用 Python 直接调 Windows 的 `BeginUpdateResourceW` / `UpdateResourceW` / `EndUpdateResourceW`，PE 结构交给系统改写，实测 0.8 秒完成且结果正确。
+
+图标源文件是 `build/postgull.ico`，由 `build/make-icon.py` 从 PNG 生成，内含 16 到 256 共七种尺寸。
 
 ### 环境变量
 
 | 变量 | 作用 |
 |---|---|
-| `FERRY_CONFIG` | 指定配置文件路径 |
-| `FERRY_NODE` | 指定 `node.exe` 路径 |
-| `FERRY_DEBUG` | 打印异常堆栈 |
-| `FERRY_WAIT_MS` | 覆盖确认等待时长（默认 45000） |
+| `POSTGULL_CONFIG` | 指定配置文件路径 |
+| `POSTGULL_NODE` | 指定 `node.exe` 路径 |
+| `POSTGULL_DEBUG` | 打印异常堆栈 |
+| `POSTGULL_WAIT_MS` | 覆盖确认等待时长（默认 45000） |
 | `DSH_SECRET` | DSH 鉴权密钥，替代凭据文件 |
 
 ### 目录

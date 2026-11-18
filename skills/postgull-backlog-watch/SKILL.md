@@ -1,6 +1,6 @@
 ---
-name: ferry-backlog-watch
-description: 定期检查 ferry 信箱积压与超时消息，发现卡住的消息就告警或补投。适合做成定时任务，替代人工盯信箱。
+name: postgull-backlog-watch
+description: 定期检查 postgull 信箱积压与超时消息，发现卡住的消息就告警或补投。适合做成定时任务，替代人工盯信箱。
 ---
 
 # 积压巡检
@@ -10,9 +10,9 @@ description: 定期检查 ferry 信箱积压与超时消息，发现卡住的消
 ## 一次性检查
 
 ```powershell
-ferry stale --hours 2      # 超过 2 小时未投递的
-ferry queue                # 全部积压与状态
-ferry doctor               # 顺带看通道是否还通
+postgull stale --hours 2      # 超过 2 小时未投递的
+postgull queue                # 全部积压与状态
+postgull doctor               # 顺带看通道是否还通
 ```
 
 退出码：`0` 表示没有超时；`1` 表示有积压或通道异常。定时任务靠这个判断要不要告警。
@@ -20,8 +20,8 @@ ferry doctor               # 顺带看通道是否还通
 ## 常驻巡检
 
 ```powershell
-ferry watch --hours 2 --interval 15m
-ferry watch --hours 2 --interval 30m --alert-to dsh-bridge
+postgull watch --hours 2 --interval 15m
+postgull watch --hours 2 --interval 30m --alert-to dsh-bridge
 ```
 
 - `--interval`：巡检间隔，写 `15m`、`30m`、`1h`。
@@ -31,16 +31,16 @@ ferry watch --hours 2 --interval 30m --alert-to dsh-bridge
 ## 做成 Windows 定时任务（不用 bat）
 
 ```powershell
-$exe = "C:\path\to\ferry.exe"
-schtasks /Create /TN "Ferry-Watch" /SC MINUTE /MO 30 /F /TR "`"$exe`" watch --once --hours 2 --alert-to dsh-bridge"
-schtasks /Run /TN "Ferry-Watch"
-schtasks /Delete /TN "Ferry-Watch" /F      # 不再需要时删掉
+$exe = "C:\path\to\postgull.exe"
+schtasks /Create /TN "PostGull-Watch" /SC MINUTE /MO 30 /F /TR "`"$exe`" watch --once --hours 2 --alert-to dsh-bridge"
+schtasks /Run /TN "PostGull-Watch"
+schtasks /Delete /TN "PostGull-Watch" /F      # 不再需要时删掉
 ```
 
 任务计划的输出不进控制台。要看历史，把 `watch --once` 的输出重定向到文件：
 
 ```powershell
-schtasks /Create /TN "Ferry-Watch" /SC MINUTE /MO 30 /F /TR "cmd /c `"$exe`" watch --once --hours 2 >> `"%LOCALAPPDATA%\Ferry\watch.log`" 2>&1"
+schtasks /Create /TN "PostGull-Watch" /SC MINUTE /MO 30 /F /TR "cmd /c `"$exe`" watch --once --hours 2 >> `"%LOCALAPPDATA%\PostGull\watch.log`" 2>&1"
 ```
 
 注意：`--once` 每次退出码非 0 时任务计划会记为失败，这正好可以在「上次运行结果」里看到。

@@ -82,7 +82,7 @@ function cmdInit({ flags }) {
   };
   saveConfig(cfg, file);
   console.log(`已生成 ${file}`);
-  console.log('下一步：把 sessions 里的 id 换成真实会话 id，然后运行 ferry doctor。');
+  console.log('下一步：把 sessions 里的 id 换成真实会话 id，然后运行 postgull doctor。');
   console.log('类别名随你定，work / bridge / learn 都行；同一类别下可以放多个会话，用 软件/类别#序号 选。');
   return 0;
 }
@@ -285,7 +285,7 @@ function cmdBlocked(cfg, { flags, positional }) {
 export async function runAdmin(cmd, ctx) {
   if (cmd === 'init') return cmdInit(ctx);
   const cfg = ctx.cfg;
-  if (!cfg) throw new BridgeError('此命令需要先有配置文件', '运行 ferry init。');
+  if (!cfg) throw new BridgeError('此命令需要先有配置文件', '运行 postgull init。');
   if (cmd === 'list') return cmdList(cfg);
   if (cmd === 'doctor') return cmdDoctor(cfg);
   if (cmd === 'session') return cmdSession(cfg, ctx);

@@ -1,18 +1,18 @@
 ---
-name: ferry-codex
-description: 在 Codex 里通过 ferry 向 DeepSeek Harness、Gemini(Antigravity) 或其他已接入软件发消息、查看回信、处理积压。当需要跨软件派活、同步结论、或确认消息是否送达时使用。
+name: postgull-codex
+description: 在 Codex 里通过 postgull 向 DeepSeek Harness、Gemini(Antigravity) 或其他已接入软件发消息、查看回信、处理积压。当需要跨软件派活、同步结论、或确认消息是否送达时使用。
 ---
 
-# ferry（Codex 侧）
+# postgull（Codex 侧）
 
 跨软件消息桥。Codex 这条通道是单向写：`codex queue` 能把消息写进目标线程，但没有读回复的子命令。
 
 ## 先看现状
 
 ```powershell
-ferry list
-ferry queue
-ferry doctor
+postgull list
+postgull queue
+postgull doctor
 ```
 
 ## 发消息
@@ -23,7 +23,7 @@ $body = @'
 '@
 $summary = '说清要对方做什么，300 字内'
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($body))
-$b64 | ferry send --to dsh-work --from "Codex" --summary $summary --expect report
+$b64 | postgull send --to dsh-work --from "Codex" --summary $summary --expect report
 ```
 
 - `--expect report`：需要对方给结论或结果。
@@ -73,4 +73,4 @@ Codex 没有读回复命令，对方的回信会出现在：
 |---|---|
 | 已入队但对方没反应 | Codex 通道无回声，去 rollout jsonl 确认对方是否收到 |
 | 目标暂不可达 | 已入信箱，`flush <别名>` 补投 |
-| 找不到 codex CLI | `ferry doctor` 会报；装 Codex CLI 或在配置里写 `options.command` 绝对路径 |
+| 找不到 codex CLI | `postgull doctor` 会报；装 Codex CLI 或在配置里写 `options.command` 绝对路径 |

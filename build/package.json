@@ -1,5 +1,5 @@
 {
-  "name": "ferry-build",
+  "name": "postgull-build",
   "private": true,
   "type": "module",
   "description": "构建期依赖，不进发布包",
