@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "updatedAt": "2026-01-01T00:00:00+08:00",
+  "note": "会话注册表。软件与类别的活跃会话记录在这里，监控面板与投递脚本都读它。换对话时把新 id 填进对应条目，旧条目 active 设为 false。",
+
+  "agy_limitation": {
+    "summary": "Antigravity 只能向界面里已经打开的对话注入消息。",
+    "detail": "CDP 通过调试端口操作页面，未打开或已切走的对话没有输入框 DOM，没有注入目标。",
+    "tested": [
+      "Target.createTarget 返回 Not supported，Electron 禁用了该域方法。",
+      "PUT /json/new 返回 500。",
+      "没有官方 HTTP 或 RPC 写入接口。"
+    ],
+    "workaround": "发消息前先在 Antigravity 界面切到目标对话并保持打开。未打开时消息进信箱暂存，等窗口打开后由面板自动补投。",
+    "send_side": "反向不受限。Antigravity 自己往外发消息可以在后台完成，不需要界面。"
+  },
+
+  "quota": {
+    "dsh": {
+      "available": true,
+      "exhaustedUntil": null,
+      "note": "DSH 额度状态。"
+    },
+    "codex": {
+      "available": true,
+      "exhaustedUntil": null,
+      "note": "Codex 额度状态。额度用尽时把 available 设为 false，exhaustedUntil 填刷新时刻，到点自动恢复。"
+    },
+    "agy": {
+      "available": true,
+      "exhaustedUntil": null,
+      "note": "Antigravity 额度状态。"
+    }
+  },
+
+  "sessions": [
+    {
+      "software": "dsh",
+      "category": "bridge",
+      "id": "填 DSH bridge 会话 id",
+      "name": "DSH Bridge 跨软件桥接",
+      "active": true,
+      "manual": false,
+      "lastActiveAt": "2026-01-01T00:00:00+08:00",
+      "source": "session/list",
+      "running": false,
+      "previousId": null
+    },
+    {
+      "software": "dsh",
+      "category": "work",
+      "id": "填 DSH work 会话 id",
+      "name": "DSH Work 任务对话",
+      "active": true,
+      "manual": false,
+      "lastActiveAt": "2026-01-01T00:00:00+08:00",
+      "source": "session/list",
+      "running": false,
+      "previousId": null
+    },
+    {
+      "software": "codex",
+      "category": "bridge",
+      "id": "填 Codex bridge 线程 id",
+      "name": "Codex Bridge",
+      "active": true,
+      "manual": false,
+      "lastActiveAt": "2026-01-01T00:00:00+08:00",
+      "source": "manual",
+      "running": false,
+      "previousId": null
+    },
+    {
+      "software": "codex",
+      "category": "work",
+      "id": "填 Codex work 线程 id",
+      "name": "Codex Work",
+      "active": true,
+      "manual": false,
+      "lastActiveAt": "2026-01-01T00:00:00+08:00",
+      "source": "manual",
+      "running": false,
+      "previousId": null
+    },
+    {
+      "software": "agy",
+      "category": "bridge",
+      "id": "填 Antigravity bridge 对话 id",
+      "name": "Antigravity Bridge",
+      "active": true,
+      "manual": false,
+      "lastActiveAt": "2026-01-01T00:00:00+08:00",
+      "source": "manual",
+      "running": false,
+      "previousId": null
+    },
+    {
+      "software": "agy",
+      "category": "work",
+      "id": "填 Antigravity work 对话 id",
+      "name": "Antigravity Work",
+      "active": true,
+      "manual": false,
+      "lastActiveAt": "2026-01-01T00:00:00+08:00",
+      "source": "manual",
+      "running": false,
+      "previousId": null
+    }
+  ],
+
+  "blocked": [],
+  "humanSleeping": false,
+  "humanSleepingSince": null,
+  "humanSleepingNote": "人类在线。设为 true 时所有对话自主推进，遇到决策点自行权衡。"
+}

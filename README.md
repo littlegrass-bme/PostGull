@@ -148,6 +148,32 @@ Aliases represent the names defined in your session table. Run `postgull list` t
 
 ---
 
+### Two Pieces / 两个部分
+
+PostGull ships as two independent pieces. They share one config file, and you can use either alone.
+
+PostGull 由两个互相独立的部分组成。它们共用同一份配置，也可以只用其中一个。
+
+| Piece | What it is | How you run it |
+|---|---|---|
+| **`postgull.exe`** | Command-line tool. Sends, receives, flushes, and checks messages. No window, no tray icon. | `postgull.exe <command>` in a terminal |
+| **`postgull-monitor.exe`** | Optional desktop panel. Shows every registered session, its live status, and what is stuck in each mailbox. Also does the automatic flush when a session wakes up. | Double-click, or `python monitor/cat_monitor.py` |
+
+| 部件 | 是什么 | 怎么启动 |
+|---|---|---|
+| **`postgull.exe`** | 命令行工具。发消息、收消息、补投、查状态。没有窗口，没有托盘图标。 | 在终端里敲 `postgull.exe <命令>` |
+| **`postgull-monitor.exe`** | 可选的桌面面板。显示所有已登记的会话、实时状态、各信箱积压。目标唤醒后自动补投也是它做的。 | 双击，或 `python monitor/cat_monitor.py` |
+
+The panel is a separate program, not a skin over the CLI. Without it, messages still send, but nothing flushes automatically when a closed window reopens: you run `postgull.exe flush <target>` yourself.
+
+面板是独立程序，不是命令行的外壳。不装它也能正常发消息，但窗口重新打开后不会自动补投，需要自己跑 `postgull.exe flush <目标>`。
+
+The panel reads `registry.json` for session ids and status. Copy `monitor/registry.example.json` to `registry.json` next to the panel executable and fill in your ids. Set `POSTGULL_HOME` if you want the panel to look somewhere other than its own folder.
+
+面板从 `registry.json` 读会话 id 与状态。把 `monitor/registry.example.json` 复制成面板旁边的 `registry.json` 再填自己的 id。想让面板去别处找，设环境变量 `POSTGULL_HOME`。
+
+---
+
 ### Commands / 常用命令
 
 | Command / 命令 | Description / 作用说明 |
