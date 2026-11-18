@@ -91,25 +91,51 @@ PostGull 原生内置主流桌面 AI 客户端的适配器，并支持多种投�
 
 ### Quick Start / 快速开始
 
-PostGull distributes as a standalone single-file binary (`postgull.exe`). Download the release and run it directly without installing Node.js or Python.
+PostGull is designed primarily for autonomous agent-to-agent collaboration. The recommended primary workflow is handing an onboarding prompt to your AI assistant to let it self-register and drive background communication. Manual CLI commands serve as a secondary fallback for inspection, debugging, and administrative override.
 
-PostGull 采用单文件二进制免安装分发（`postgull.exe`）。下载 Release 产物后可直接在 Windows 命令行下运行，无需提前安装 Node.js 或 Python 运行环境。
+PostGull 核心面向多个 AI Agent 之间的自主协同与静默通讯。首选的工作方式是将开箱提示词发送给你的 AI 助手，让其自主读取规范、登记会话并在后台按需协作；手动敲命令行属于次要手段，仅在状态巡检、手工调试或人工介入时使用。
 
-#### 1. Generate Configuration / 生成配置
+#### Primary: Agent Autonomous Setup / 首选路径：Agent 自主配置与握手
 
-Run this command in PowerShell to create your initial configuration file `postgull.config.json`:
+Instead of editing JSON or running commands by hand, paste this prompt into your AI coding assistant (Gemini, Codex, DeepSeek, Claude, etc.):
 
-在终端中执行以下命令，在当前目录下生成初始配置文件 `postgull.config.json`：
+无需手动敲命令或修改 JSON，直接将以下提示词发送给正在使用的 AI 编程助手（如 Antigravity / Gemini、Codex、DeepSeek Harness 等）：
+
+> 🤖 **Prompt for AI Setup / 复制给 AI 的引导提示词**
+>
+> **English:**
+> ```text
+> I placed the PostGull project at: [YOUR_PATH_HERE, e.g. D:\Tools\PostGull]
+> Please read README.md and postgull.config.example.json in that directory. Inspect your own session/thread ID and runtime environment, then create or update postgull.config.json (or monitor/registry.json) so you are registered as an active participant. Follow PostGull's delivery conventions (summary headers, base64 payload transmission, and two-phase reply protocol) for cross-software communication.
+> ```
+>
+> **中文：**
+> ```text
+> 我把 PostGull 项目放在了：[在此填入你的解压路径，例如 D:\Tools\PostGull]
+> 请阅读该目录下的 README.md 与 postgull.config.example.json（或 monitor/registry.example.json）。检查你当前的会话或线程 ID 与环境，生成或更新 postgull.config.json，将你自己登记为活跃节点。后续跨软件收发消息请严格遵循 PostGull 规范（带摘要头、通过 base64 传递正文、遵守先回“收到”的两次回复契约）。
+> ```
+
+Your assistant will automatically discover the project, configure its session endpoint, and start exchanging structured payloads with other agents.
+
+AI 助手收到后会自动识别路径、写入会话配置，并按照规约开始与其他软件中的 Agent 自主协同通讯。
+
+#### Secondary: Manual CLI Fallback / 次要路径：手动命令行排查与操作
+
+If you prefer configuring by hand, testing connectivity, or troubleshooting channels, use the CLI commands:
+
+若需要手动介入、连通性排错或无 Agent 环境下的手工测试，可按以下步骤操作：
+
+##### 1. Generate Configuration / 生成配置
 
 ```powershell
 postgull.exe init
 ```
 
-#### 2. Configure Session IDs / 登记会话 ID
+##### 2. Lookup & Register Session IDs / 获取并登记会话 ID
 
-Open `postgull.config.json` and replace the placeholder `id` fields under `sessions` with your actual session identifiers. Each application only needs one active session per category:
+Open `postgull.config.json` and replace placeholder `id` values with your real IDs:
 
-打开生成的配置文件，把 `sessions` 列表中各项目的 `id` 替换为实际的会话标识。每个软件在同一类别下只需要登记一个活跃会话：
+打开生成的配置文件，把 `sessions` 列表中各项目的 `id` 替换为实际的会话标识：
 
 | Application / 软件 | Lookup Method / 如何获取会话 ID |
 |---|---|
@@ -122,7 +148,7 @@ Configuration discovery follows this lookup chain: current working directory →
 
 配置查找顺序为：当前工作目录 → exe 所在目录 → `%APPDATA%\PostGull\postgull.config.json`。若将配置放在 AppData 目录下，即可配合 PATH 环境变量在系统任意目录直接调用。也可以通过设置环境变量 `POSTGULL_CONFIG` 指定自定义路径。
 
-#### 3. Self-Check / 连通性自检
+##### 3. Self-Check / 连通性自检
 
 Run the doctor command to verify adapter reachability, configuration validity, and mailbox queue status:
 
@@ -132,11 +158,11 @@ Run the doctor command to verify adapter reachability, configuration validity, a
 postgull.exe doctor
 ```
 
-#### 4. Send Your First Message / 发送第一条测试消息
+##### 4. Send A Manual Test Message / 手工发送测试消息
 
 Send a message by referencing the target alias registered in your configuration:
 
-根据配置文件中登记的目标别名发送第一条测试消息：
+根据配置文件中登记的目标别名发送一条测试消息：
 
 ```powershell
 postgull.exe send --to <target-alias> --summary "Please review these findings" --body-file .\reply.md

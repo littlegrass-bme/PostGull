@@ -144,3 +144,32 @@ console.log(`体积：${(readFileSync(exe).length / 1024 / 1024).toFixed(1)} MB`
 if (!/^postgull /.test(version)) {
   throw new Error('exe 冒烟测试失败：version 输出不符合预期');
 }
+
+// 6. 编译图形监控面板启动器 postgull-monitor.exe
+const windir = process.env.WINDIR || 'C:\\Windows';
+const cscCandidates = [
+  join(windir, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe'),
+  join(windir, 'Microsoft.NET', 'Framework', 'v4.0.30319', 'csc.exe'),
+];
+const csc = cscCandidates.find(p => existsSync(p));
+const launcherSource = join(here, 'LauncherPortable.cs');
+const monitorExe = join(outDir, 'postgull-monitor.exe');
+const monitorIco = join(root, 'assets', 'logo.ico');
+
+if (csc && existsSync(launcherSource) && existsSync(monitorIco)) {
+  console.log(`\n> 编译图形监控面板启动器: ${monitorExe}`);
+  try {
+    execFileSync(csc, [
+      '/target:winexe',
+      '/r:System.Windows.Forms.dll',
+      `/win32icon:${monitorIco}`,
+      `/out:${monitorExe}`,
+      launcherSource,
+    ], { stdio: 'inherit', cwd: root, windowsHide: true });
+    console.log(`已成功编译 postgull-monitor.exe (${(readFileSync(monitorExe).length / 1024).toFixed(0)} KB)`);
+  } catch (err) {
+    console.warn(`编译 postgull-monitor.exe 失败: ${err.message}`);
+  }
+} else {
+  console.warn('缺少 csc.exe 或启动器源码，跳过 postgull-monitor.exe 编译');
+}
