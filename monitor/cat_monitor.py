@@ -22,7 +22,7 @@ except Exception:
 
 # 任务栏独立进程 AppId
 try:
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('antigravity.triagent.bridgemonitor.catpaw')
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('postgull.monitor.panel')
 except Exception:
     pass
 
@@ -33,6 +33,10 @@ REG_PATH = os.path.join(BASE_DIR, "registry.json")
 QUEUE_DIR = os.path.join(BASE_DIR, "queue")
 ARCHIVE_PATH = os.path.join(QUEUE_DIR, "archive.jsonl")
 ICO_PATH = os.path.join(BASE_DIR, "assets", "logo.ico")
+# 标题栏与任务栏用的 PNG。Tk 的 PhotoImage 不认 ICO，只认 PNG/GIF，
+# 而 iconbitmap 在部分环境会被忽略，所以两条路都准备一份。
+LOGO_SMALL = os.path.join(BASE_DIR, "assets", "logo-28.png")
+LOGO_LARGE = os.path.join(BASE_DIR, "assets", "logo-64.png")
 # 投递走同目录下的 postgull.exe。它接受与开发期 relay.mjs 等价的参数：
 #   postgull send --to X --from Y --summary Z --encoding base64  (正文走 stdin)
 #   postgull flush <软件> --category <类别>
@@ -283,6 +287,25 @@ class BridgeMonitorApp(tk.Tk):
             except Exception:
                 pass
 
+        # 任务栏与标题栏图标。iconbitmap 只认 .ico，且部分环境下会被忽略，
+        # 再用 PNG 设一次大图标，两条路都走一遍。
+        # Tk 8.6 原生支持 PNG，不需要 Pillow。
+        #
+        # 尺寸说明：iconphoto 给的是 64px 那版，系统自己缩放到任务栏尺寸，
+        # 比先缩到 28 再放大清晰。标题栏单独用 28px 那版，直接按原尺寸贴，不缩放。
+        if os.path.exists(LOGO_LARGE):
+            try:
+                big = tk.PhotoImage(file=LOGO_LARGE)
+                self.iconphoto(True, big)
+                self._icon_ref = big  # 留住引用，否则会被回收，图标变空白
+            except Exception:
+                pass
+        if os.path.exists(LOGO_SMALL):
+            try:
+                self._logo_img = tk.PhotoImage(file=LOGO_SMALL)
+            except Exception:
+                self._logo_img = None
+
         self.current_filter = "全部"
         self.all_queue_items = []
         self._last_rendered_fingerprint = ""
@@ -303,7 +326,10 @@ class BridgeMonitorApp(tk.Tk):
         
         tbox = tk.Frame(header, bg=self.c_bg)
         tbox.pack(side="left")
-        tk.Label(tbox, text="🕊", font=(FONT_FAMILY, 20), bg=self.c_bg).pack(side="left", padx=(0, 10))
+        # 标题栏用真实图标，不用 emoji：🕊 在不同字体下渲染差别大，
+        # Windows 上常显示成黑白方块。
+        if getattr(self, "_logo_img", None) is not None:
+            tk.Label(tbox, image=self._logo_img, bg=self.c_bg).pack(side="left", padx=(0, 10))
         tk.Label(tbox, text="PostGull 信鸥", font=(FONT_FAMILY, 16, "bold"), bg=self.c_bg, fg=self.c_blue).pack(side="left")
         
         right_ctrl = tk.Frame(header, bg=self.c_bg)

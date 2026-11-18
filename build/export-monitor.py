@@ -40,9 +40,20 @@ if n != 1:
     raise SystemExit('BASE_DIR 那行没找到，源文件可能变了，停下来人工确认')
 
 # 2. 图标：开发期叫 cat_monitor.ico，仓库里统一到 assets 下。
+#    Tk 的 PhotoImage 不认 ICO，标题栏与任务栏另用 PNG。
 text = re.sub(
     r'ICO_PATH\s*=\s*os\.path\.join\(BASE_DIR,\s*"cat_monitor\.ico"\)',
     'ICO_PATH = os.path.join(BASE_DIR, "assets", "logo.ico")',
+    text,
+)
+text = re.sub(
+    r'LOGO_SMALL\s*=\s*os\.path\.join\(BASE_DIR,\s*"postgull_logo_28\.png"\)',
+    'LOGO_SMALL = os.path.join(BASE_DIR, "assets", "logo-28.png")',
+    text,
+)
+text = re.sub(
+    r'LOGO_LARGE\s*=\s*os\.path\.join\(BASE_DIR,\s*"postgull_logo_64\.png"\)',
+    'LOGO_LARGE = os.path.join(BASE_DIR, "assets", "logo-64.png")',
     text,
 )
 
