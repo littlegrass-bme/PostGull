@@ -43,7 +43,7 @@ Manual pasting breaks down quickly: long blocks get truncated by terminal buffer
 
 PostGull wires these local environments together. You trigger dispatches from the CLI, and messages land directly into the target session's context. When the recipient window is closed, payloads queue in local storage until the workspace opens, then go out on the next sweep or a manual flush. Every hop carries a unique token you can search for later.
 
-PostGull 为这些本地 AI 客户端搭起直接通信通道。在命令行发送一条消息，它会投递到目标会话的上下文里；如果对方窗口还没打开，消息会暂存在本地信箱中，等窗口开启后由巡检或手动 flush 补投；每一跳都附带全局唯一凭证，支持全链路对账。
+PostGull 为这些本地 AI 客户端搭起直接通信通道。在命令行发送一条消息，它会投递到目标会话的上下文里；如果对方窗口还没打开，消息会暂存在本地信箱中，等窗口开启后由监控自动补投；每一跳都附带全局唯一凭证，支持全链路对账。
 
 ```text
  ┌──────────────────────┐       PostGull Relay         ┌──────────────────────┐
@@ -83,7 +83,7 @@ PostGull 原生内置主流桌面 AI 客户端的适配器，并支持多种投�
 #### Dispatch Modes / 核心工作模式
 
 - **Direct Live Dispatch / 实时直投模式**：When the destination is open and idle, messages inject into the active session without queuing.<br/>当目标会话正处于打开且空闲状态时，消息直接送入前台窗口或进程上下文，不必排队。
-- **Asynchronous Mailbox / 异步暂存模式**：If a window is closed, busy, or out of quota, messages sit in `queue/<alias>.jsonl` until you run `postgull flush` or a watcher sweep picks them up.<br/>若目标会话未开启、正忙或额度耗尽，消息进入本地信箱排队，等目标就绪后由 `postgull flush` 或巡检补投。
+- **Asynchronous Mailbox / 异步暂存模式**：If a window is closed, busy, or out of quota, messages sit in `queue/<alias>.jsonl` until the target wakes up, then get delivered by the watcher or a manual `postgull flush`.<br/>若目标会话未开启、正忙或额度耗尽，消息进入本地信箱排队；目标恢复后由监控自动补投，也可手动 `postgull flush`。
 - **Receipt Verification / 凭证核验模式**：Every transaction generates a global unique token (`RELAY-timestamp-random`), making delivery status auditable across both send and receive transcripts.<br/>每次消息发送均生成全局唯一凭证，发收两端日志均可依据凭证精确查证。
 - **Two-Phase Reply Protocol / 两次回复契约**：Enforces an instant `ACK` receipt first, followed by an optional second response based on task completion or measured objections, eliminating empty chatter.<br/>规范收发双方先立即回“收到”，后续按任务结果或异议自适应决定是否回第二次，杜绝无意义复读。
 
