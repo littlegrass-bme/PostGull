@@ -4,6 +4,7 @@ import json
 import glob
 import subprocess
 import threading
+import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 import ctypes
@@ -113,11 +114,12 @@ class IOSSwitch(tk.Canvas):
 
 # 消息详情与打回弹窗
 class MessageDetailDialog(tk.Toplevel):
-    def __init__(self, parent, item, on_rejected_callback=None):
+    def __init__(self, parent, item, on_rejected_callback=None, on_deleted_callback=None):
         super().__init__(parent)
         self.title("信箱消息详情与处置")
         self.item = item
         self.on_rejected_callback = on_rejected_callback
+        self.on_deleted_callback = on_deleted_callback
         
         w, h = 640, 720
         sw = self.winfo_screenwidth()
@@ -168,15 +170,25 @@ class MessageDetailDialog(tk.Toplevel):
         if reason:
             tk.Label(meta_card, text=f"暂存原因: {reason}", font=(FONT_FAMILY, 9), bg=self.c_card, fg="#d29922", anchor="w").pack(fill="x", pady=(4, 0))
 
-        # 2. 完整内容可滚动阅读区
-        tk.Label(pad_frame, text="完整消息正文 (可上下滑动查看)", font=(FONT_FAMILY, 10, "bold"), bg=self.c_bg, fg=self.c_dim).pack(anchor="w", pady=(0, 4))
-        
+        # 底部按钮区先 pack 到底部，再让正文区占据剩余空间。
+        # 顺序很关键：正文区若带 expand=True 且先 pack，会把底部挤出可视区，
+        # 实测超出 454 px，按钮看不到也点不到。
+        reject_card = tk.Frame(pad_frame, bg=self.c_card, highlightbackground=self.c_border, highlightthickness=1, padx=14, pady=12)
+        reject_card.pack(side="bottom", fill="x", pady=(12, 0))
+
+        # 2. 完整内容可滚动阅读区（装进剩下的空间）
+        tk.Label(pad_frame, text="完整消息正文 (可上下滑动查看)", font=(FONT_FAMILY, 10, "bold"), bg=self.c_bg, fg=self.c_dim).pack(side="top", anchor="w", pady=(0, 4))
+
         content_card = tk.Frame(pad_frame, bg=self.c_card, highlightbackground=self.c_border, highlightthickness=1)
-        content_card.pack(fill="both", expand=True, pady=(0, 14))
+        content_card.pack(side="top", fill="both", expand=True, pady=(0, 0))
         
         self.txt_content = tk.Text(
             content_card, bg=self.c_card, fg=self.c_fg, font=(FONT_FAMILY, 10),
-            wrap="word", relief="flat", padx=12, pady=10, highlightthickness=0
+            wrap="word", relief="flat", padx=12, pady=10, highlightthickness=0,
+            # 显式给小的默认高度：Text 默认 24 行，会让内容区请求 744 px，
+            # 把底部按钮区挤出窗口。给 8 行后总需求落在窗口内，
+            # 实际显示高度仍由 fill/expand 撑满剩余空间。
+            height=8, width=40,
         )
         sb = ttk.Scrollbar(content_card, orient="vertical", command=self.txt_content.yview)
         self.txt_content.configure(yscrollcommand=sb.set)
@@ -188,10 +200,7 @@ class MessageDetailDialog(tk.Toplevel):
         self.txt_content.insert("1.0", full_text)
         self.txt_content.config(state="disabled")
 
-        # 3. 打回与反馈控制区
-        reject_card = tk.Frame(pad_frame, bg=self.c_card, highlightbackground=self.c_border, highlightthickness=1, padx=14, pady=12)
-        reject_card.pack(fill="x")
-        
+        # 3. 打回与反馈控制区（沿用上面已 pack 到底部的那个 reject_card）
         tk.Label(reject_card, text="打回与处置 (Reject & Return)", font=(FONT_FAMILY, 10, "bold"), bg=self.c_card, fg=self.c_red).pack(anchor="w", pady=(0, 6))
         
         # 快捷理由标签按钮
@@ -235,6 +244,25 @@ class MessageDetailDialog(tk.Toplevel):
         )
         btn_reject.pack(side="right")
 
+        # 直接删除：不打回、不通知发送方，直接从信箱丢掉。
+        # 打回适合「发错目标，要让对方知道」，删除适合「这条本来就是多余的」。
+        del_row = tk.Frame(reject_card, bg=self.c_card)
+        del_row.pack(fill="x", pady=(8, 0))
+
+        tk.Label(
+            del_row, text="删掉这条不会通知发送方，消息正文也不归档。",
+            font=(FONT_FAMILY, 9), bg=self.c_card, fg=self.c_dim, anchor="w"
+        ).pack(side="left")
+
+        btn_delete = tk.Button(
+            del_row, text="🗑 直接删除", font=(FONT_FAMILY, 10, "bold"),
+            bg=self.c_btn, fg=self.c_red, activebackground="#30363d", activeforeground="#ffffff",
+            relief="flat", highlightbackground=self.c_border, highlightthickness=1,
+            padx=14, pady=4, cursor="hand2",
+            command=self.confirm_delete
+        )
+        btn_delete.pack(side="right")
+
     def set_reason(self, text):
         self.ent_reason.delete(0, tk.END)
         self.ent_reason.insert(0, text)
@@ -251,6 +279,26 @@ class MessageDetailDialog(tk.Toplevel):
         # 执行打回操作
         if self.on_rejected_callback:
             self.on_rejected_callback(self.item, reason)
+        self.destroy()
+
+    def confirm_delete(self):
+        token = self.item.get("token", "未知")
+        f_to = normalize_name(self.item.get("to", "未知"))
+        raw_summary = str(self.item.get("summary", "") or "").replace("\n", " ")
+        summary = raw_summary[:60] + ("…" if len(raw_summary) > 60 else "")
+
+        confirm_text = (
+            f"确定直接删除这条消息吗？\n\n"
+            f"凭证: {token}\n"
+            f"收件方: {f_to}\n"
+            f"摘要: {summary}\n\n"
+            f"不会通知发送方，正文也不会写进归档。删掉后无法恢复。"
+        )
+        if not messagebox.askyesno("确认删除", confirm_text, parent=self):
+            return
+
+        if self.on_deleted_callback:
+            self.on_deleted_callback(self.item)
         self.destroy()
 
 class BridgeMonitorApp(tk.Tk):
@@ -314,6 +362,9 @@ class BridgeMonitorApp(tk.Tk):
         
         # 自动派发/自动接收控制（防并发与防抖）
         self._flushing_targets = set()
+        # CDP 端口缓存。探测一次约几百毫秒，2.5 秒轮询不能每次都扫进程。
+        self._cdp_port = None
+        self._cdp_port_at = 0.0
         self._last_flush_time = {}
         
         self.setup_ui()
@@ -542,7 +593,70 @@ class BridgeMonitorApp(tk.Tk):
         self.after(2000, lambda: self.lbl_toast.pack_forget())
 
     def open_detail_dialog(self, item):
-        MessageDetailDialog(self, item, on_rejected_callback=self.handle_reject_message)
+        MessageDetailDialog(
+            self, item,
+            on_rejected_callback=self.handle_reject_message,
+            on_deleted_callback=self.handle_delete_message,
+        )
+
+    def handle_delete_message(self, item):
+        """直接从信箱删掉一条消息，不通知发送方，不写归档。
+
+        与打回的区别：打回是「发错地方了，要让对方知道」，会向发送方发一条说明；
+        删除是「这条本来就多余」，静默丢弃。比如重复通知、测试残留。
+        """
+        token = item.get("token")
+        msg_id = item.get("id")
+        file_path = item.get("_file_path")
+
+        if not file_path or not os.path.exists(file_path):
+            messagebox.showerror("删除失败", f"找不到队列文件：{file_path}", parent=self)
+            return
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            kept = []
+            removed = 0
+            for l in lines:
+                if not l.strip():
+                    continue
+                try:
+                    d = json.loads(l)
+                except Exception:
+                    kept.append(l)
+                    continue
+                # 优先按 token 匹配（唯一），没有 token 再退回 id。
+                hit = (token and d.get("token") == token) or (
+                    not token and msg_id and d.get("id") == msg_id
+                )
+                if hit:
+                    removed += 1
+                else:
+                    kept.append(l)
+
+            if removed == 0:
+                messagebox.showwarning(
+                    "没有找到",
+                    f"队列文件里没有匹配的记录，可能已被其他进程取走。\n凭证: {token}",
+                    parent=self
+                )
+                self.scan_queue()
+                return
+
+            # 原子写：先写临时文件再替换，避免写一半崩溃留下残缺队列。
+            tmp = file_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.writelines(kept)
+            os.replace(tmp, file_path)
+
+            self.copy_text("", f"🗑 已删除 {removed} 条，凭证 {token}（未通知发送方）")
+        except Exception as err:
+            messagebox.showerror("删除失败", f"删除时出错: {err}", parent=self)
+            return
+
+        self.scan_queue()
 
     def handle_reject_message(self, item, reason):
         msg_id = item.get("id")
@@ -626,6 +740,92 @@ class BridgeMonitorApp(tk.Tk):
         # 立即重新扫描刷新
         self.scan_queue()
 
+    def find_cdp_port(self):
+        """找一个真正可用的 Antigravity CDP 端口。
+
+        只读 DevToolsActivePort 文件不够用，实测三类失效：
+          1. 启动时没带 --remote-debugging-port，文件根本不生成；
+          2. 带的是 =0，端口随机，文件被删就读不到；
+          3. 文件是上次运行留下的，端口早被别的进程占用。
+        所以按三条线索依次找，判定标准是 /json/version 返回带 Browser 的 JSON。
+        Antigravity 自己的认证服务返回 401，web 服务返回 HTML，都不会命中。
+        """
+        if self._cdp_port and time.time() - self._cdp_port_at < 5:
+            return self._cdp_port
+
+        candidates = []
+
+        port_file = os.path.join(
+            os.environ.get("APPDATA", ""), "Antigravity", "DevToolsActivePort"
+        )
+        try:
+            with open(port_file, "r", encoding="utf-8") as f:
+                p = int(f.read().strip().split("\n")[0].strip())
+            candidates.append(p)
+        except Exception:
+            pass
+
+        env_port = os.environ.get("POSTGULL_CDP_PORT", "").strip()
+        if env_port.isdigit():
+            candidates.append(int(env_port))
+
+        for port in candidates:
+            if self._is_cdp(port):
+                self._cdp_port, self._cdp_port_at = port, time.time()
+                return port
+
+        # 扫 Antigravity 进程实际监听的端口
+        for port in self._listening_ports_of_antigravity():
+            if port in candidates:
+                continue
+            if self._is_cdp(port, timeout=0.5):
+                self._cdp_port, self._cdp_port_at = port, time.time()
+                return port
+
+        self._cdp_port = None
+        return None
+
+    @staticmethod
+    def _is_cdp(port, timeout=0.8):
+        """判断某端口是不是 CDP。真正的 CDP 会返回带 Browser 字段的 JSON。"""
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/json/version", timeout=timeout
+            ) as resp:
+                if resp.status != 200:
+                    return False
+                data = json.loads(resp.read().decode("utf-8", "ignore"))
+            return isinstance(data.get("Browser"), str)
+        except Exception:
+            return False
+
+    @staticmethod
+    def _listening_ports_of_antigravity():
+        """取 Antigravity 各进程正在监听的本地端口。取不到返回空列表。"""
+        try:
+            script = (
+                "$pids = (Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue).Id;"
+                "if (-not $pids) { return };"
+                "Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue"
+                " | Where-Object { $pids -contains $_.OwningProcess }"
+                " | Select-Object -ExpandProperty LocalPort -Unique"
+            )
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                capture_output=True, text=True, timeout=8,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            )
+            ports = []
+            for line in (out.stdout or "").splitlines():
+                s = line.strip()
+                if s.isdigit():
+                    n = int(s)
+                    if 0 < n < 65536:
+                        ports.append(n)
+            return list(dict.fromkeys(ports))
+        except Exception:
+            return []
+
     def probe_agy_foreground(self):
         """直接问 Antigravity 现在哪个对话真的打开着。
 
@@ -634,12 +834,10 @@ class BridgeMonitorApp(tk.Tk):
         状态（work 一直"前台"、bridge 一直"休眠"），人切了窗口也看不出来。
         CDP 的 /json/list 才是实时真相，代价是一次本地 HTTP，2.5 秒一次可以接受。
         """
-        port_file = os.path.join(
-            os.environ.get("APPDATA", ""), "Antigravity", "DevToolsActivePort"
-        )
+        port = self.find_cdp_port()
+        if port is None:
+            return None  # None 表示查不到，此时退回注册表旧值而不是误判成"全休眠"
         try:
-            with open(port_file, "r", encoding="utf-8") as f:
-                port = f.read().strip().split("\n")[0].strip()
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=2) as resp:
                 pages = json.loads(resp.read().decode("utf-8", "ignore"))
             ids = set()
@@ -650,7 +848,7 @@ class BridgeMonitorApp(tk.Tk):
                         ids.add(m.group(1).lower())
             return ids
         except Exception:
-            return None  # None 表示查不到，此时退回注册表旧值而不是误判成"全休眠"
+            return None
 
     def poll_data(self):
         reg_data = None
@@ -777,7 +975,13 @@ class BridgeMonitorApp(tk.Tk):
         ))
         
         cmd = [POSTGULL_EXE, "flush", sw, "--category", cat]
-        success = False
+        # 三种结果要分开报，不能一律当成功：
+        #   0 = 真的投出去了（或信箱本来就空）
+        #   3 = 对方没开，消息还留在信箱，属正常等待，不是错误
+        #   其他 = 投递失败
+        # 之前只看 returncode == 0，把「对方没开」也显示成投递成功，
+        # 掩盖了自动投递投不出去的真实原因。
+        outcome = "failed"
         out_msg = ""
         try:
             res = subprocess.run(
@@ -789,28 +993,40 @@ class BridgeMonitorApp(tk.Tk):
                 timeout=120,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
             )
-            out_msg = (res.stdout or "").strip()
-            success = (res.returncode == 0)
-            print(f"[PostGull 自动接收结果] {norm_target} exit={res.returncode}\n{out_msg}")
+            out_msg = ((res.stdout or "") + (res.stderr or "")).strip()
+            if res.returncode == 0:
+                outcome = "sent"
+            elif res.returncode == 3:
+                outcome = "sleeping"
+            print(f"[PostGull 自动接收结果] {norm_target} exit={res.returncode} outcome={outcome}\n{out_msg}")
         except Exception as e:
             out_msg = str(e)
             print(f"[PostGull 自动接收异常] {norm_target}: {e}")
         finally:
-            self.after(0, lambda: self._on_auto_flush_finished(key, norm_target, success, out_msg))
+            self.after(0, lambda: self._on_auto_flush_finished(key, norm_target, outcome, out_msg))
 
-    def _on_auto_flush_finished(self, key, norm_target, success, out_msg):
+    def _on_auto_flush_finished(self, key, norm_target, outcome, out_msg):
         self._flushing_targets.discard(key)
         self.scan_queue()
-        if success:
+        if outcome == "sent":
             self.copy_text("", f"⚡ 自动投递成功：{norm_target} 积压消息已接收！")
             self.lbl_footer.config(
                 text=f"✓ 自动投递成功: {norm_target} 积压消息已接收 | 自动派发机制就绪",
                 fg=self.c_green
             )
-        else:
+        elif outcome == "sleeping":
+            # 对方没开窗口或没带调试端口。消息还在信箱，不是投递失败，
+            # 但必须让人看见「为什么没投出去」，否则会以为自动投递坏了。
+            first_line = out_msg.splitlines()[0] if out_msg else "目标未激活"
             self.lbl_footer.config(
-                text="数据源: registry.json + queue/*.jsonl | 自动派发机制就绪",
-                fg="#484f58"
+                text=f"⏸ 未投递: {norm_target} {first_line} | 消息仍在信箱",
+                fg="#d29922"
+            )
+        else:
+            first_line = out_msg.splitlines()[0] if out_msg else "未知原因"
+            self.lbl_footer.config(
+                text=f"✗ 自动投递失败: {norm_target} {first_line}",
+                fg=self.c_red
             )
 
     def update_sessions(self, data):

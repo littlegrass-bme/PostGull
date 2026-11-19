@@ -2,22 +2,144 @@
 // 硬限制：只能发给界面里已经打开的对话。未打开时由上层转入信箱。
 import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { execFile } from 'node:child_process';
 import { BridgeError } from '../config.mjs';
 import { sleep } from '../util.mjs';
 
 const UUID_RE = /\/c\/([0-9a-fA-F-]{36})/;
 
-function portOf(sw) {
-  const p = sw.options.devtoolsPortFile;
-  if (!p || !existsSync(p)) {
-    throw new BridgeError(`找不到 Antigravity 调试端口文件：${p || '(未配置 options.devtoolsPortFile)'}`, '确认 Antigravity 正在运行；路径通常是 %APPDATA%/Antigravity/DevToolsActivePort。');
+// ---------- 调试端口自动探测 ----------
+// 只读 DevToolsActivePort 文件不够用，实测有三类失效情况：
+//   1. 启动时没带 --remote-debugging-port，文件根本不生成；
+//   2. 带的是 --remote-debugging-port=0，端口随机，文件被删就读不到；
+//   3. 文件是上次运行留下的，端口早被别的进程占用。
+// 所以按三条线索依次找，谁先证实是 CDP 就用谁：
+//   1. 配置里的 devtoolsPortFile（默认 %APPDATA%/Antigravity/DevToolsActivePort）
+//   2. 环境变量 POSTGULL_CDP_PORT
+//   3. 扫 Antigravity 进程实际监听的本地端口，逐个问 /json/version
+// 判定标准是 /json/version 返回带 Browser 字段的 JSON。别的本地服务不会返回这个，
+// 实测 Antigravity 自己的认证服务返回 401 {"error":"unauthorized"}。
+let cdpCache = { port: null, at: 0 };
+const CDP_CACHE_MS = 5000;
+
+async function probeCdp(port, timeoutMs = 800) {
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/json/version`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && typeof j.Browser === 'string' ? j : null;
+  } catch {
+    return null;
   }
-  return readFileSync(p, 'utf8').trim().split('\n')[0].trim();
+}
+
+// 取 Antigravity 所有进程正在监听的本地端口。
+// Windows 用 PowerShell，其他平台用 lsof。取不到就返回空数组，
+// 让上层退回到「端口文件」这一条线索，不会因为探测失败而完全不能用。
+function listeningPorts() {
+  return new Promise((resolve) => {
+    if (process.platform === 'win32') {
+      const script = [
+        "$pids = (Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue).Id;",
+        'if (-not $pids) { return };',
+        'Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue',
+        ' | Where-Object { $pids -contains $_.OwningProcess }',
+        ' | Select-Object -ExpandProperty LocalPort -Unique',
+      ].join(' ');
+      execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command', script],
+        { timeout: 6000, windowsHide: true }, (err, stdout) => {
+          if (err || !stdout) return resolve([]);
+          resolve(parsePorts(stdout));
+        });
+    } else {
+      execFile('lsof', ['-nP', '-iTCP', '-sTCP:LISTEN', '-c', 'Antigravity'],
+        { timeout: 6000 }, (err, stdout) => {
+          if (err || !stdout) return resolve([]);
+          const ports = stdout.split(/\r?\n/)
+            .map((l) => (l.match(/:(\d+)\s+\(LISTEN\)/) || [])[1])
+            .filter(Boolean);
+          resolve(parsePorts(ports.join('\n')));
+        });
+    }
+  });
+}
+
+function parsePorts(text) {
+  const ports = text.split(/\r?\n/)
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0 && n < 65536);
+  return [...new Set(ports)];
+}
+
+// 返回 { port, source } 或 null。带缓存，避免每次轮询都扫进程。
+async function findCdpPort(sw, { force = false } = {}) {
+  const now = Date.now();
+  if (!force && cdpCache.port && now - cdpCache.at < CDP_CACHE_MS) {
+    if (await probeCdp(cdpCache.port, 400)) {
+      cdpCache.at = now;
+      return { port: cdpCache.port, source: 'cache' };
+    }
+    cdpCache = { port: null, at: 0 };
+  }
+
+  const tried = new Set();
+
+  const file = sw.options.devtoolsPortFile;
+  if (file && existsSync(file)) {
+    try {
+      const p = Number(readFileSync(file, 'utf8').trim().split('\n')[0].trim());
+      if (Number.isInteger(p) && p > 0) {
+        tried.add(p);
+        if (await probeCdp(p)) {
+          cdpCache = { port: p, at: now };
+          return { port: p, source: 'DevToolsActivePort' };
+        }
+      }
+    } catch { /* 文件坏了，走下一条线索 */ }
+  }
+
+  const envPort = Number(process.env.POSTGULL_CDP_PORT || 0);
+  if (Number.isInteger(envPort) && envPort > 0) {
+    tried.add(envPort);
+    if (await probeCdp(envPort)) {
+      cdpCache = { port: envPort, at: now };
+      return { port: envPort, source: 'POSTGULL_CDP_PORT' };
+    }
+  }
+
+  for (const p of await listeningPorts()) {
+    if (tried.has(p)) continue;
+    if (await probeCdp(p, 500)) {
+      cdpCache = { port: p, at: now };
+      return { port: p, source: '端口扫描' };
+    }
+  }
+
+  cdpCache = { port: null, at: 0 };
+  return null;
+}
+
+// 找不到 CDP 时给出可执行的说明，而不是只说「找不到文件」。
+async function explainNoCdp(sw) {
+  const ports = await listeningPorts();
+  const file = sw.options.devtoolsPortFile;
+  if (!ports.length) {
+    return 'Antigravity 没有在运行，或没有监听任何本地端口。先启动它再试。';
+  }
+  return `Antigravity 在运行（监听 ${ports.join(', ')}），但没有一个是 CDP 调试端口。`
+    + (file && existsSync(file)
+      ? '端口文件存在但其中的端口不是 CDP，可能是上次运行留下的。'
+      : '也没有端口文件，说明启动时没带 --remote-debugging-port。')
+    + ' 带参数重启即可：Antigravity.exe --remote-debugging-port=9222'
+    + '（端口可自选，也可用环境变量 POSTGULL_CDP_PORT 指定）。';
 }
 
 async function pages(sw) {
-  const port = portOf(sw);
-  const list = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json());
+  const cdp = await findCdpPort(sw);
+  if (!cdp) throw new BridgeError('Antigravity CDP 端口不可用', await explainNoCdp(sw));
+  const list = await fetch(`http://127.0.0.1:${cdp.port}/json/list`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json());
   return list
     .filter((t) => t.type === 'page' && t.url && t.url.includes('/c/'))
     .map((t) => ({ ...t, uuid: (UUID_RE.exec(t.url) || [])[1] }));

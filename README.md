@@ -225,6 +225,30 @@ When a message is delayed, PostGull avoids silent failures and outputs the exact
 - **Target busy / 目标忙碌**：Messages remain queued to prevent overriding active foreground prompts.<br/>消息会保持排队，避免打断对方正在进行的推演或覆盖未发草稿。
 - **Target quota exhausted / 目标额度耗尽**：The tool stops immediately instead of blindly dispatching into a failing runtime.<br/>工具会直接拒绝投递并告知刷新时间，避免无效调用。
 
+#### Antigravity needs a debug port / Antigravity 必须带调试端口
+
+Antigravity can only be injected over the Chrome DevTools Protocol, which exists only if the app was started with `--remote-debugging-port`. A window that is visibly open still cannot receive anything without that flag, so start it like this:
+
+Antigravity 只能通过 CDP 注入，而这个协议只在启动时带 `--remote-debugging-port` 才会开启。窗口开着但没带这个参数，一样收不到消息。这样启动：
+
+```powershell
+Antigravity.exe --remote-debugging-port=9222
+```
+
+PostGull finds the port automatically, in this order: the `DevToolsActivePort` file, the `POSTGULL_CDP_PORT` environment variable, then a scan of the ports the Antigravity processes are actually listening on. A port counts as CDP only if `/json/version` returns a JSON body with a `Browser` field, so the app's own internal services are never mistaken for it.
+
+PostGull 会自动找到端口，顺序是：先读 `DevToolsActivePort` 文件，再看 `POSTGULL_CDP_PORT` 环境变量，最后扫 Antigravity 各进程实际监听的端口。判定标准是 `/json/version` 返回带 `Browser` 字段的 JSON，所以不会把应用自己的内部服务当成 CDP。
+
+When no CDP port is found, the error names the real cause rather than claiming the conversation is closed:
+
+找不到 CDP 端口时，报错会说明真实原因，而不是笼统地说对话没开：
+
+```text
+Antigravity 在运行（监听 54258），但没有一个是 CDP 调试端口。
+也没有 DevToolsActivePort 文件，说明启动时没带 --remote-debugging-port。
+需要带参数重启：Antigravity.exe --remote-debugging-port=9222
+```
+
 ---
 
 ### Confirming Delivery / 确认送达
@@ -352,6 +376,7 @@ Icon patching relies on Python 3 using standard library `ctypes`. The build auto
 | `POSTGULL_PYTHON` | Specify Python 3 binary for PE resource patching.<br/>指定资源写入所需的 Python 解释器。 |
 | `POSTGULL_DEBUG` | Enable verbose diagnostic logging and stack traces.<br/>开启详细异常堆栈与诊断日志。 |
 | `POSTGULL_WAIT_MS` | Override receipt confirmation timeout (defaults to 45,000 ms).<br/>覆盖投递确认等待超时阈值（默认 45 秒）。 |
+| `POSTGULL_CDP_PORT` | Pin the Antigravity CDP port instead of auto-detecting it.<br/>直接指定 Antigravity 的 CDP 端口，跳过自动探测。 |
 | `DSH_SECRET` | Pass DSH authentication secret directly.<br/>直接指定 DSH 通信鉴权密钥。 |
 
 </details>
