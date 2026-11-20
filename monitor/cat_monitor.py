@@ -50,8 +50,8 @@ PROMPTS = {
     "dsh-work": "你是 dsh 的全新 work 任务对话。请阅读本目录下的 README.md 与 registry.json，向旧 DSH Work 索要任务进展与启动提示词，完成交接后更新自身为活跃会话。",
     "codex-bridge": "你是 codex 的全新 bridge 跨软件桥接会话。请阅读本目录下的 README.md 与 registry.json，向旧 DSH Bridge 索要通信现状与启动提示词，完成自检后更新自身为活跃会话。",
     "codex-work": "你是 codex 的全新 work 任务对话。请阅读本目录下的 README.md 与 registry.json，向旧 DSH Work 索要任务进展与启动提示词，完成交接后更新自身为活跃会话。",
-    "agy-bridge": "你是 agy 的全新 bridge 跨软件桥接会话。请阅读本目录下的 README.md 与 registry.json，向旧 DSH Bridge 索要通信现状与启动提示词，保持界面打开后更新自身为活跃会话。",
-    "agy-work": "你是 agy 的全新 work 任务对话。请阅读本目录下的 README.md 与 registry.json，向旧 DSH Work 索要任务进展与启动提示词，完成交接后更新自身为活跃会话。"
+    "agy-bridge": "你是 agy 的全新 bridge 跨软件桥接会话。请阅读本目录下的 README.md 与 registry.json，向旧 agy Bridge（registry.json 里 agy / bridge 的上任会话，不是 dsh）索要通信现状与启动提示词，保持界面打开后更新自身为活跃会话。",
+    "agy-work": "你是 agy 的全新 work 任务对话。请阅读本目录下的 README.md 与 registry.json，向旧 agy Work（registry.json 里 agy / work 的上任会话，不是 dsh）索要任务进展与启动提示词，完成交接后更新自身为活跃会话。"
 }
 
 def normalize_name(raw_name):
